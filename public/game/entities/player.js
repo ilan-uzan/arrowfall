@@ -168,15 +168,28 @@ export class Player {
       ctx.globalAlpha = 0.5;
     }
 
+    // Draw player body (TowerFall-style simple sprite)
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
-
-    // Draw facing indicator
+    
+    // Draw simple face/eyes
     ctx.fillStyle = '#ffffff';
-    const indicatorX = this.facing > 0 
-      ? this.x + this.width - 4 
-      : this.x + 4;
-    ctx.fillRect(indicatorX, this.y + 8, 2, 4);
+    const eyeY = this.y + 8;
+    if (this.facing > 0) {
+      // Looking right
+      ctx.fillRect(this.x + 6, eyeY, 2, 2); // Left eye
+      ctx.fillRect(this.x + 12, eyeY, 2, 2); // Right eye
+    } else {
+      // Looking left
+      ctx.fillRect(this.x + 6, eyeY, 2, 2); // Left eye
+      ctx.fillRect(this.x + 12, eyeY, 2, 2); // Right eye
+    }
+
+    // Draw arrow indicator (if has arrows)
+    if (this.arrows > 0) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(this.x + this.width / 2 - 1, this.y - 4, 2, 3);
+    }
 
     ctx.globalAlpha = 1.0;
   }
