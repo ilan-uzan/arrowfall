@@ -88,6 +88,7 @@ export class SurvivalScene {
     this.lives = 3;
     this.score = 0;
     this.startTime = Date.now();
+    this.playerShootHeld = false;
   }
 
   exit() {
@@ -143,6 +144,17 @@ export class SurvivalScene {
       const actions = this.game.inputRouter.getActions(1);
       if (actions) {
         this.player.update(dt, this.level, actions);
+        
+        // Handle player shooting
+        if (actions.shootPressed && !this.playerShootHeld) {
+          this.playerShootHeld = true;
+          if (this.player.fireArrow()) {
+            // Arrow already added to scene by fireArrow
+          }
+        }
+        if (!actions.shootPressed) {
+          this.playerShootHeld = false;
+        }
       }
     }
 
@@ -195,12 +207,13 @@ export class SurvivalScene {
 
   checkCollisions(dt) {
     // Arrow vs Player collisions
-    for (const arrow of this.arrows) {
-      if (arrow.embedded || !arrow.active) continue;
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
+      if (arrow.embedded || arrow.ownerId === 1) continue;
       
-      if (!this.player.dead && arrow.checkPlayerCollision(this.player)) {
+      if (!this.player.dead && this.checkAABB(arrow.getBounds(), this.player.getBounds())) {
         this.player.die();
-        arrow.remove();
+        this.arrows.splice(i, 1);
         this.game.triggerScreenShake();
         this.game.triggerHitFlash();
         this.game.triggerSlowMo();
@@ -209,44 +222,29 @@ export class SurvivalScene {
       }
     }
 
-    // Arrow vs NPC collisions
-    for (const arrow of this.arrows) {
-      if (arrow.embedded || !arrow.active || arrow.ownerId === 1) continue;
-      
-      for (const npc of this.npcs) {
-        if (npc.dead || npc.id === arrow.ownerId) continue;
-        
-        if (this.checkAABB(arrow.getBounds(), npc.getBounds())) {
-          npc.die();
-          arrow.remove();
-          this.score += 50;
-          this.game.triggerScreenShake();
-          this.game.audio.playHit();
-          this.createDeathParticles(npc.x, npc.y, npc.color);
-        }
-      }
-    }
-
     // Player arrows vs NPCs
-    for (const arrow of this.arrows) {
-      if (arrow.embedded || !arrow.active || arrow.ownerId !== 1) continue;
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
+      if (arrow.embedded || arrow.ownerId !== 1) continue;
       
       for (const npc of this.npcs) {
         if (npc.dead) continue;
         
         if (this.checkAABB(arrow.getBounds(), npc.getBounds())) {
           npc.die();
-          arrow.remove();
+          this.arrows.splice(i, 1);
           this.score += 50;
           this.game.triggerScreenShake();
           this.game.audio.playHit();
           this.createDeathParticles(npc.x, npc.y, npc.color);
+          break;
         }
       }
     }
 
     // Arrow pickup
-    for (const arrow of this.arrows) {
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
       if (!arrow.embedded) continue;
       
       if (!this.player.dead) {
@@ -256,7 +254,7 @@ export class SurvivalScene {
         );
         if (dist < 16) {
           if (this.player.pickupArrow()) {
-            arrow.remove();
+            this.arrows.splice(i, 1);
             this.game.audio.playPickup();
           }
         }
