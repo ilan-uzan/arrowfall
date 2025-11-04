@@ -42,7 +42,9 @@ PORT=3000
 ```
 
 4. Initialize the database:
-The Supabase table should be created manually. Run this SQL in your Supabase SQL editor:
+The Supabase table has been created via MCP. The `matches` table is already set up in your Supabase database.
+
+If you need to recreate it manually, run this SQL in your Supabase SQL editor:
 ```sql
 CREATE TABLE IF NOT EXISTS matches (
   id SERIAL PRIMARY KEY,
@@ -55,7 +57,7 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 ```
 
-Or run the init script:
+You can also run the init script to verify:
 ```bash
 npm run init:db
 ```
