@@ -255,11 +255,13 @@ export class NPC {
             this.arrows++;
             this.game.audio.playPickup();
             // Remove arrow from scene
-            const arena = this.game.sceneManager.scenes.arena;
-            if (arena) {
-              const arrow = arena.arrows.find(a => a.embedded && 
+            const survival = this.game.sceneManager.scenes.survival;
+            if (survival) {
+              const arrowIndex = survival.arrows.findIndex(a => a.embedded && 
                 Math.abs(a.x - this.targetX) < 16 && Math.abs(a.y - this.targetY) < 16);
-              if (arrow) arrow.remove();
+              if (arrowIndex >= 0) {
+                survival.arrows.splice(arrowIndex, 1);
+              }
             }
           }
           this.state = NPC_STATE.PATROL;
