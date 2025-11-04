@@ -1,30 +1,29 @@
-// Level system for managing tile-based collision
+// Level system - Arrowfall
+import { PALETTE, TILE } from '../constants.js';
+
 export class Level {
   constructor(data) {
-    this.name = data.name;
-    this.tileSize = data.tileSize;
-    this.width = data.width;
-    this.height = data.height;
-    this.spawns = data.spawns;
-    this.solids = data.solids;
+    this.name = data.name || 'Arena';
+    this.tileSize = data.tileSize || TILE;
+    this.width = data.width || 20;
+    this.height = data.height || 11;
+    this.spawns = data.spawns || { p1: [32, 128], p2: [288, 128] };
+    this.solids = data.solids || [];
   }
 
-  // Get tile coordinates from world coordinates
   worldToTile(x, y) {
     const tx = Math.floor(x / this.tileSize);
     const ty = Math.floor(y / this.tileSize);
     return { tx, ty };
   }
 
-  // Check if a tile is solid
   isSolid(tx, ty) {
     if (ty < 0 || ty >= this.height || tx < 0 || tx >= this.width) {
       return true; // Out of bounds is solid
     }
-    return this.solids[ty][tx] === true;
+    return this.solids[ty] && this.solids[ty][tx] === true;
   }
 
-  // AABB collision check with tiles
   checkCollision(x, y, width, height) {
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
@@ -41,7 +40,6 @@ export class Level {
     return false;
   }
 
-  // Resolve collision by separating entity from tiles
   resolveCollision(entity) {
     const { x, y, width, height } = entity;
     const leftTile = Math.floor(x / this.tileSize);
@@ -75,7 +73,6 @@ export class Level {
     }
   }
 
-  // Check if entity is on ground
   checkOnGround(entity) {
     const { x, y, width, height } = entity;
     const bottomY = y + height;
@@ -91,7 +88,6 @@ export class Level {
     return false;
   }
 
-  // Check if entity is touching wall
   checkTouchingWall(entity, direction) {
     const { x, y, width, height } = entity;
     const leftTile = Math.floor(x / this.tileSize);
@@ -117,9 +113,8 @@ export class Level {
     return false;
   }
 
-  // Render level (for debugging/visualization)
   render(ctx) {
-    ctx.fillStyle = '#242635';
+    ctx.fillStyle = PALETTE.bg1;
     for (let ty = 0; ty < this.height; ty++) {
       for (let tx = 0; tx < this.width; tx++) {
         if (this.isSolid(tx, ty)) {
@@ -134,4 +129,3 @@ export class Level {
     }
   }
 }
-

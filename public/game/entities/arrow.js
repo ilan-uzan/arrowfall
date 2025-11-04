@@ -1,22 +1,26 @@
-// Arrow entity that can be fired and picked up
+// Arrow Entity - Arrowfall
+import { ARROW_SPEED, PALETTE } from '../constants.js';
+
 export class Arrow {
-  constructor(x, y, vx, vy, ownerId) {
+  constructor(x, y, vx, vy, ownerId, game) {
+    this.game = game;
     this.x = x;
     this.y = y;
     this.width = 8;
-    this.height = 8;
+    this.height = 2;
     this.vx = vx;
     this.vy = vy;
     this.ownerId = ownerId;
     this.embedded = false;
     this.active = true;
+    this.trail = []; // Last 3 positions
   }
 
   update(dt, level) {
     if (!this.active || this.embedded) return;
 
     // Apply gravity
-    const arrowGravity = 280; // px/s^2
+    const arrowGravity = 280;
     this.vy += arrowGravity * dt;
 
     // Update position
@@ -24,6 +28,12 @@ export class Arrow {
     const oldY = this.y;
     this.x += this.vx * dt;
     this.y += this.vy * dt;
+
+    // Add to trail
+    this.trail.push({ x: oldX, y: oldY });
+    if (this.trail.length > 3) {
+      this.trail.shift();
+    }
 
     // Check collision with level
     if (level.checkCollision(this.x, this.y, this.width, this.height)) {
@@ -45,7 +55,6 @@ export class Arrow {
     }
   }
 
-  // Check collision with player
   checkPlayerCollision(player) {
     if (!this.active || this.embedded || player.id === this.ownerId || player.dead) {
       return false;
@@ -60,48 +69,52 @@ export class Arrow {
     );
   }
 
-  // Check collision with pickup range
-  checkPickupCollision(player) {
-    if (!this.embedded || !this.active) {
-      return false;
-    }
-
-    const pickupRange = 16; // pixels
-    const dx = player.x + player.width / 2 - (this.x + this.width / 2);
-    const dy = player.y + player.height / 2 - (this.y + this.height / 2);
-    const dist = Math.sqrt(dx * dx + dy * dy);
-
-    return dist < pickupRange;
-  }
-
-  // Remove arrow
   remove() {
     this.active = false;
   }
 
-  // Render arrow
   render(ctx) {
     if (!this.active) return;
 
     if (this.embedded) {
       // Draw as pickup item
-      ctx.fillStyle = '#fbbf24';
+      ctx.fillStyle = PALETTE.accent3;
       ctx.beginPath();
       ctx.arc(this.x + this.width / 2, this.y + this.height / 2, 6, 0, Math.PI * 2);
       ctx.fill();
     } else {
-      // Draw as flying arrow
-      ctx.fillStyle = '#7dd3fc';
+      // Draw trail
+      this.trail.forEach((pos, i) => {
+        const alpha = (i + 1) / this.trail.length * 0.3;
+        ctx.fillStyle = PALETTE.arrow;
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(pos.x, pos.y, 2, 2);
+      });
+      ctx.globalAlpha = 1.0;
+
+      // Draw arrow
+      ctx.fillStyle = PALETTE.arrow;
       ctx.save();
       ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
       const angle = Math.atan2(this.vy, this.vx);
       ctx.rotate(angle);
+      
+      // Arrow shaft
       ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+      
+      // Arrow head
+      ctx.fillStyle = PALETTE.ink;
+      ctx.beginPath();
+      ctx.moveTo(this.width / 2, 0);
+      ctx.lineTo(this.width / 2 - 3, -2);
+      ctx.lineTo(this.width / 2 - 3, 2);
+      ctx.closePath();
+      ctx.fill();
+      
       ctx.restore();
     }
   }
 
-  // Get bounds
   getBounds() {
     return {
       x: this.x,
@@ -111,4 +124,3 @@ export class Arrow {
     };
   }
 }
-

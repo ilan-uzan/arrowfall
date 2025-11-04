@@ -62,8 +62,14 @@ export class CharacterSelectScene {
       
       this.readyCount = this.players.filter(p => p.ready).length;
       if (this.readyCount >= 2 && this.readyCount === this.players.length) {
-        // All ready, start game
+        // All ready, start game - setup players first
+        this.game.setupPlayers(this.players);
         setTimeout(() => {
+          // Reset arena scene
+          const arena = this.game.sceneManager.scenes[SCENES.ARENA];
+          if (arena) {
+            arena.enter();
+          }
           this.game.sceneManager.setScene(SCENES.ARENA);
         }, 500);
       }

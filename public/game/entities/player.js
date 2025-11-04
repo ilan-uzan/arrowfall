@@ -1,11 +1,15 @@
-// Player entity with movement, jumping, and combat
+// Player Entity - Arrowfall
+import { GRAVITY, MOVE_ACC, MAX_SPEED, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, ARROW_SPEED, START_ARROWS, TILE, PALETTE, SCENES } from '../constants.js';
+import { Arrow } from './Arrow.js';
+
 export class Player {
-  constructor(x, y, id, color) {
+  constructor(x, y, id, color, game) {
     this.id = id;
+    this.game = game;
     this.x = x;
     this.y = y;
-    this.width = 20;
-    this.height = 28;
+    this.width = 12;
+    this.height = 14;
     this.vx = 0;
     this.vy = 0;
     this.color = color;
@@ -15,79 +19,78 @@ export class Player {
     this.touchingWall = { left: false, right: false };
     this.coyoteTime = 0;
     this.jumpBuffer = 0;
-    this.arrows = 3;
+    this.arrows = START_ARROWS;
     this.maxArrows = 5;
     this.dead = false;
     this.wins = 0;
+    this.score = 0;
+    this.shootHeld = false;
   }
 
-  update(dt, level, input) {
+  update(dt, level, actions) {
     if (this.dead) return;
 
-    // Coyote time: allow jump shortly after leaving ground
+    // Coyote time
     if (this.wasOnGround && !this.onGround) {
-      this.coyoteTime = 0.1; // 100ms
+      this.coyoteTime = COYOTE_MS / 1000;
     }
     if (this.coyoteTime > 0) {
       this.coyoteTime -= dt;
     }
 
-    // Jump buffer: allow jump slightly before landing
-    if (input.jump) {
-      this.jumpBuffer = 0.12; // 120ms
+    // Jump buffer
+    if (actions.jumpPressed) {
+      this.jumpBuffer = JUMP_BUFFER_MS / 1000;
     }
     if (this.jumpBuffer > 0) {
       this.jumpBuffer -= dt;
     }
 
     // Horizontal movement
-    const groundSpeed = 140; // px/s
-    const airControl = 0.65;
-    const accel = 1200; // px/s^2
-    const friction = 900; // px/s^2
-
     let targetVx = 0;
-    if (input.moveX !== 0) {
-      targetVx = input.moveX * groundSpeed;
-      this.facing = input.moveX;
+    if (actions.left) {
+      targetVx = -MAX_SPEED;
+      this.facing = -1;
+    } else if (actions.right) {
+      targetVx = MAX_SPEED;
+      this.facing = 1;
     }
 
     if (this.onGround) {
       // Ground movement
       if (Math.abs(targetVx) > 0.1) {
-        this.vx = this.approach(this.vx, targetVx, accel * dt);
+        this.vx = this.approach(this.vx, targetVx, MOVE_ACC * dt);
       } else {
-        this.vx = this.approach(this.vx, 0, friction * dt);
+        this.vx = this.approach(this.vx, 0, MOVE_ACC * dt * 0.75); // Friction
       }
     } else {
       // Air movement (reduced control)
       if (Math.abs(targetVx) > 0.1) {
-        this.vx = this.approach(this.vx, targetVx, accel * airControl * dt);
+        this.vx = this.approach(this.vx, targetVx, MOVE_ACC * dt * 0.65);
       }
     }
 
     // Jumping
     if (this.jumpBuffer > 0 && (this.onGround || this.coyoteTime > 0)) {
-      this.vy = -360; // Jump velocity
+      this.vy = JUMP_VEL;
       this.jumpBuffer = 0;
       this.coyoteTime = 0;
+      this.game.audio.playJump();
     }
 
     // Gravity
-    const gravity = 1400; // px/s^2
-    const maxFallSpeed = 640; // px/s
-    this.vy += gravity * dt;
+    this.vy += GRAVITY * dt;
+    const maxFallSpeed = 640;
     if (this.vy > maxFallSpeed) {
       this.vy = maxFallSpeed;
     }
 
     // Wall slide
-    const wallSlideSpeed = 200; // px/s
     if (!this.onGround && this.vy > 0) {
-      if ((this.touchingWall.left && input.moveX < 0) || 
-          (this.touchingWall.right && input.moveX > 0)) {
-        if (this.vy > wallSlideSpeed) {
-          this.vy = wallSlideSpeed;
+      if ((this.touchingWall.left && actions.left) || 
+          (this.touchingWall.right && actions.right)) {
+        if (this.vy > WALL_SLIDE_MAX) {
+          this.vy = WALL_SLIDE_MAX;
         }
       }
     }
@@ -107,16 +110,24 @@ export class Player {
     // Resolve collisions
     level.resolveCollision(this);
 
-    // Clamp to level bounds (optional - could wrap around)
+    // Clamp to level bounds
     const levelWidth = level.width * level.tileSize;
     const levelHeight = level.height * level.tileSize;
     if (this.x < 0) this.x = 0;
     if (this.x + this.width > levelWidth) this.x = levelWidth - this.width;
     if (this.y < 0) this.y = 0;
     if (this.y + this.height > levelHeight) this.y = levelHeight - this.height;
+
+    // Shooting
+    if (actions.shootPressed && !this.shootHeld) {
+      this.shootHeld = true;
+      this.fireArrow();
+    }
+    if (!actions.shootPressed) {
+      this.shootHeld = false;
+    }
   }
 
-  // Helper: smoothly approach target value
   approach(current, target, step) {
     if (current < target) {
       return Math.min(current + step, target);
@@ -125,16 +136,22 @@ export class Player {
     }
   }
 
-  // Fire arrow
   fireArrow() {
     if (this.arrows > 0 && !this.dead) {
       this.arrows--;
+      const spawnX = this.x + (this.width / 2) + (this.facing * 12);
+      const spawnY = this.y + (this.height / 2);
+      const arrow = new Arrow(spawnX, spawnY, this.facing * ARROW_SPEED, 0, this.id, this.game);
+      const arena = this.game.sceneManager.scenes[SCENES.ARENA];
+      if (arena) {
+        arena.arrows.push(arrow);
+      }
+      this.game.audio.playShoot();
       return true;
     }
     return false;
   }
 
-  // Pickup arrow
   pickupArrow() {
     if (this.arrows < this.maxArrows) {
       this.arrows++;
@@ -143,58 +160,61 @@ export class Player {
     return false;
   }
 
-  // Knockout
-  knockout() {
+  die() {
     this.dead = true;
     this.vx = 0;
     this.vy = 0;
   }
 
-  // Respawn for new round
   respawn(x, y) {
     this.x = x;
     this.y = y;
     this.vx = 0;
     this.vy = 0;
     this.dead = false;
-    this.arrows = 3;
+    this.arrows = START_ARROWS;
     this.coyoteTime = 0;
     this.jumpBuffer = 0;
   }
 
-  // Render player
   render(ctx) {
     if (this.dead) {
       ctx.globalAlpha = 0.5;
     }
 
-    // Draw player body (TowerFall-style simple sprite)
+    // Draw player body (TowerFall-style)
     ctx.fillStyle = this.color;
     ctx.fillRect(this.x, this.y, this.width, this.height);
     
+    // Draw outline
+    ctx.strokeStyle = PALETTE.ink;
+    ctx.globalAlpha = 0.6;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(this.x, this.y, this.width, this.height);
+    ctx.globalAlpha = 1.0;
+    
     // Draw simple face/eyes
-    ctx.fillStyle = '#ffffff';
-    const eyeY = this.y + 8;
+    ctx.fillStyle = PALETTE.ink;
+    const eyeY = this.y + 6;
     if (this.facing > 0) {
       // Looking right
-      ctx.fillRect(this.x + 6, eyeY, 2, 2); // Left eye
-      ctx.fillRect(this.x + 12, eyeY, 2, 2); // Right eye
+      ctx.fillRect(this.x + 3, eyeY, 2, 2); // Left eye
+      ctx.fillRect(this.x + 7, eyeY, 2, 2); // Right eye
     } else {
       // Looking left
-      ctx.fillRect(this.x + 6, eyeY, 2, 2); // Left eye
-      ctx.fillRect(this.x + 12, eyeY, 2, 2); // Right eye
+      ctx.fillRect(this.x + 3, eyeY, 2, 2); // Left eye
+      ctx.fillRect(this.x + 7, eyeY, 2, 2); // Right eye
     }
 
     // Draw arrow indicator (if has arrows)
     if (this.arrows > 0) {
-      ctx.fillStyle = '#fbbf24';
+      ctx.fillStyle = PALETTE.accent3;
       ctx.fillRect(this.x + this.width / 2 - 1, this.y - 4, 2, 3);
     }
 
     ctx.globalAlpha = 1.0;
   }
 
-  // Get AABB bounds
   getBounds() {
     return {
       x: this.x,
@@ -204,29 +224,7 @@ export class Player {
     };
   }
 
-  // Check if player is stomping (falling fast)
   isStomping() {
     return this.vy > 220;
   }
-
-  // Get feet bounds for stomp detection
-  getFeetBounds() {
-    return {
-      x: this.x,
-      y: this.y + this.height - 4,
-      width: this.width,
-      height: 4
-    };
-  }
-
-  // Get head bounds for stomp detection
-  getHeadBounds() {
-    return {
-      x: this.x,
-      y: this.y,
-      width: this.width,
-      height: 4
-    };
-  }
 }
-
