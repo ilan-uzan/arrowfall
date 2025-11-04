@@ -57,10 +57,6 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 ```
 
-You can also run the init script to verify:
-```bash
-npm run init:db
-```
 
 5. Start the development server:
 ```bash
@@ -159,12 +155,9 @@ Get recent match results.
 ```
 arrowfall/
 ├── server/
-│   ├── index.js              # Express server
-│   ├── routes/
-│   │   └── api.js            # API routes
+│   ├── index.js              # Express server & API routes
 │   ├── db/
-│   │   ├── db.js             # Supabase client
-│   │   └── init.js           # Database initialization
+│   │   └── db.js             # Supabase client
 │   └── views/
 │       ├── index.ejs         # Landing page
 │       └── leaderboard.ejs   # Leaderboard page

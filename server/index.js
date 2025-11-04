@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { initDatabase, saveMatch, getLeaderboard } = require('./db');
+const { initDatabase, saveMatch, getLeaderboard } = require('./db/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
