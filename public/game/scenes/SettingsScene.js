@@ -66,23 +66,24 @@ export class SettingsScene {
       }
     }
     
-    // Tab navigation with up/down
-    if (actions.up && this.selectedTab > 0) {
-      this.selectedTab--;
-      this.game.audio.playConfirm();
-    }
-    if (actions.down && this.selectedTab < this.tabs.length - 1) {
-      this.selectedTab++;
-      this.game.audio.playConfirm();
-    }
-
+    // Tab navigation with up/down (only if not on button)
     if (actions.up) {
-      this.selectedButton = Math.max(0, this.selectedButton - 1);
-      this.game.audio.playConfirm();
+      if (this.selectedButton > 0) {
+        this.selectedButton--;
+        this.game.audio.playConfirm();
+      } else if (this.selectedTab > 0) {
+        this.selectedTab--;
+        this.game.audio.playConfirm();
+      }
     }
     if (actions.down) {
-      this.selectedButton = Math.min(this.buttons.length - 1, this.selectedButton + 1);
-      this.game.audio.playConfirm();
+      if (this.selectedButton < this.buttons.length - 1) {
+        this.selectedButton++;
+        this.game.audio.playConfirm();
+      } else if (this.selectedTab < this.tabs.length - 1) {
+        this.selectedTab++;
+        this.game.audio.playConfirm();
+      }
     }
   }
 

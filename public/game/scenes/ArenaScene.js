@@ -387,11 +387,6 @@ export class ArenaScene {
       ctx.textAlign = 'center';
       ctx.fillText(`Round ${Object.values(this.roundWins).reduce((a, b) => a + b, 0) + 1}`, w / 2, 18);
     }
-      
-      // Player color indicator
-      ctx.fillStyle = player.color;
-      ctx.fillRect(x, y + 20, 20, 4);
-    });
   }
 }
 
