@@ -50,6 +50,14 @@ export class TitleScene {
       this.selectedButton = Math.min(this.buttons.length - 1, this.selectedButton + 1);
       this.game.audio.playConfirm();
     }
+    if (actions.up) {
+      this.selectedButton = Math.max(0, this.selectedButton - 1);
+      this.game.audio.playConfirm();
+    }
+    if (actions.down) {
+      this.selectedButton = Math.min(this.buttons.length - 1, this.selectedButton + 1);
+      this.game.audio.playConfirm();
+    }
   }
 
   render(ctx) {

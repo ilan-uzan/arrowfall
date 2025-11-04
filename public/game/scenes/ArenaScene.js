@@ -348,21 +348,45 @@ export class ArenaScene {
   renderHUD(ctx) {
     const { w, h } = this.game.view;
 
-    // Player scores (top corners)
+    // Top corners: Player wins
     this.players.forEach((player, index) => {
-      const x = index === 0 ? 10 : w - 100;
-      const y = 10;
+      const x = index === 0 ? 10 : w - 10;
+      const y = 18;
+      ctx.textAlign = index === 0 ? 'left' : 'right';
+      ctx.fillStyle = player.color;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(`P${player.id}`, x, y);
       
-      // Wins
-      ctx.fillStyle = PALETTE.ink;
-      ctx.font = '12px monospace';
-      ctx.textAlign = 'left';
-      ctx.fillText(`P${player.id} Wins: ${this.roundWins[player.id] || 0}`, x, y);
+      // Win dots
+      ctx.font = '10px monospace';
+      const wins = this.roundWins[player.id] || 0;
+      const dotsY = y + 15;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = i < wins ? player.color : PALETTE.bg1;
+        ctx.fillRect(x + (index === 0 ? i * 8 : -(i + 1) * 8), dotsY, 6, 6);
+      }
       
       // Arrows
       ctx.fillStyle = PALETTE.sub;
+      ctx.font = '9px monospace';
+      ctx.fillText(`${player.arrows} arrows`, x, dotsY + 12);
+      
+      // Dead indicator
+      if (player.dead) {
+        ctx.fillStyle = PALETTE.accent2;
+        ctx.font = '10px monospace';
+        ctx.fillText('DEAD', x, dotsY + 25);
+      }
+    });
+
+    // Round info (center top)
+    if (this.state === 'playing') {
+      const alivePlayers = this.players.filter(p => !p.dead).length;
+      ctx.fillStyle = alivePlayers > 1 ? PALETTE.accent : PALETTE.accent2;
       ctx.font = '10px monospace';
-      ctx.fillText(`Arrows: ${player.arrows}`, x, y + 15);
+      ctx.textAlign = 'center';
+      ctx.fillText(`Round ${Object.values(this.roundWins).reduce((a, b) => a + b, 0) + 1}`, w / 2, 18);
+    }
       
       // Player color indicator
       ctx.fillStyle = player.color;

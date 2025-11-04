@@ -65,9 +65,23 @@ export class SettingsScene {
         this.game.audio.playConfirm();
       }
     }
+    
+    // Tab navigation with up/down
+    if (actions.up && this.selectedTab > 0) {
+      this.selectedTab--;
+      this.game.audio.playConfirm();
+    }
+    if (actions.down && this.selectedTab < this.tabs.length - 1) {
+      this.selectedTab++;
+      this.game.audio.playConfirm();
+    }
 
-    if (actions.up || actions.down) {
-      this.selectedButton = this.selectedButton === 0 ? 1 : 0;
+    if (actions.up) {
+      this.selectedButton = Math.max(0, this.selectedButton - 1);
+      this.game.audio.playConfirm();
+    }
+    if (actions.down) {
+      this.selectedButton = Math.min(this.buttons.length - 1, this.selectedButton + 1);
       this.game.audio.playConfirm();
     }
   }
@@ -120,27 +134,39 @@ export class SettingsScene {
     // Back button
     const buttonY = h - 30;
     ctx.fillStyle = this.selectedButton === 0 ? PALETTE.accent : PALETTE.sub;
-    ctx.font = '14px monospace';
+    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('← Back', w / 2, buttonY);
+    
+    if (this.selectedButton === 0) {
+      ctx.fillStyle = PALETTE.accent;
+      ctx.fillRect(w / 2 - 35, buttonY - 8, 4, 16);
+      ctx.fillRect(w / 2 + 31, buttonY - 8, 4, 16);
+    }
   }
 
   renderControllers(ctx, w, h, startY) {
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = '12px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     let y = startY + 15;
-    ctx.fillText('Connected Gamepads:', 20, y);
+    ctx.fillText('CONNECTED CONTROLLERS:', 20, y);
     y += 20;
 
     if (this.connectedGamepads.length === 0) {
       ctx.fillStyle = PALETTE.sub;
-      ctx.fillText('No gamepads connected', 20, y);
-      ctx.fillText('Connect a PS5/Xbox/3rd party controller', 20, y + 15);
-      ctx.fillText('and press any button to join', 20, y + 30);
+      ctx.font = '11px monospace';
+      ctx.fillText('No controllers detected', 20, y);
+      y += 15;
+      ctx.fillText('• Connect PS5/Xbox/3rd party Bluetooth controller', 20, y);
+      y += 15;
+      ctx.fillText('• Press any button on controller', 20, y);
+      y += 15;
+      ctx.fillText('• Press A/Cross to join as Player 2+', 20, y);
     } else {
+      ctx.font = '11px monospace';
       this.connectedGamepads.forEach((pad, index) => {
         const binding = Object.values(this.game.inputRouter.playerBindings)
           .find(b => b.type === 'gamepad' && b.id === pad.index);
@@ -148,27 +174,31 @@ export class SettingsScene {
           .find(id => this.game.inputRouter.playerBindings[id] === binding) : null;
         
         ctx.fillStyle = PALETTE.ink;
-        ctx.fillText(`${index + 1}. ${pad.id}`, 20, y);
+        // Shorten controller name if too long
+        const padName = pad.id.length > 25 ? pad.id.substring(0, 22) + '...' : pad.id;
+        ctx.fillText(`${index + 1}. ${padName}`, 20, y);
         if (playerId) {
           ctx.fillStyle = PALETTE.accent;
-          ctx.fillText(`→ Player ${playerId}`, 150, y);
+          ctx.font = 'bold 11px monospace';
+          ctx.fillText(`→ P${playerId}`, 180, y);
         } else {
           ctx.fillStyle = PALETTE.sub;
-          ctx.fillText(`→ Not assigned`, 150, y);
+          ctx.font = '11px monospace';
+          ctx.fillText(`→ Not assigned`, 180, y);
         }
         y += 18;
       });
+      
+      y += 10;
+      ctx.fillStyle = PALETTE.sub;
+      ctx.font = '10px monospace';
+      ctx.fillText('Tip: Press A/Cross to join as Player 2+ in Character Select', 20, y);
     }
-
-    y += 20;
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = '10px monospace';
-    ctx.fillText('Tip: Press A/Cross on controller to join as Player 2+', 20, y);
   }
 
   renderKeyboard(ctx, w, h, startY) {
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = '12px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -177,8 +207,8 @@ export class SettingsScene {
     // Player 1 Controls
     ctx.fillStyle = PALETTE.accent;
     ctx.font = 'bold 12px monospace';
-    ctx.fillText('Player 1 Controls:', 20, y);
-    y += 20;
+    ctx.fillText('PLAYER 1:', 20, y);
+    y += 18;
 
     ctx.fillStyle = PALETTE.ink;
     ctx.font = '11px monospace';
@@ -190,14 +220,14 @@ export class SettingsScene {
     ];
     p1Controls.forEach(control => {
       ctx.fillText(control, 30, y);
-      y += 16;
+      y += 15;
     });
 
-    y += 10;
+    y += 12;
     ctx.fillStyle = PALETTE.accent;
     ctx.font = 'bold 12px monospace';
-    ctx.fillText('Player 2 Controls (Fallback):', 20, y);
-    y += 20;
+    ctx.fillText('PLAYER 2 (Fallback):', 20, y);
+    y += 18;
 
     ctx.fillStyle = PALETTE.ink;
     ctx.font = '11px monospace';
@@ -209,13 +239,13 @@ export class SettingsScene {
     ];
     p2Controls.forEach(control => {
       ctx.fillText(control, 30, y);
-      y += 16;
+      y += 15;
     });
   }
 
   renderGamepad(ctx, w, h, startY) {
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = '12px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -223,27 +253,31 @@ export class SettingsScene {
     
     ctx.fillStyle = PALETTE.accent;
     ctx.font = 'bold 12px monospace';
-    ctx.fillText('Gamepad Controls:', 20, y);
-    y += 20;
+    ctx.fillText('GAMEPAD CONTROLS:', 20, y);
+    y += 18;
 
     ctx.fillStyle = PALETTE.ink;
     ctx.font = '11px monospace';
     const gamepadControls = [
       'Left Stick:  Move',
-      'A / Cross:   Jump',
-      'X / Square:  Shoot',
+      'A / Cross ×: Jump',
+      'X / Square ☐: Shoot',
       'R2 / RT:     Shoot (Alt)',
-      'Start:       Pause / Join'
+      'Start/Options: Pause / Join'
     ];
     gamepadControls.forEach(control => {
       ctx.fillText(control, 30, y);
-      y += 16;
+      y += 15;
     });
 
-    y += 10;
+    y += 12;
     ctx.fillStyle = PALETTE.sub;
     ctx.font = '10px monospace';
-    ctx.fillText('Supports: PS5, Xbox, 3rd party Bluetooth', 20, y);
+    ctx.fillText('✓ PS5 DualSense', 20, y);
+    y += 12;
+    ctx.fillText('✓ Xbox Controller', 20, y);
+    y += 12;
+    ctx.fillText('✓ 3rd Party Bluetooth', 20, y);
   }
 }
 

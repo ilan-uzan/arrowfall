@@ -89,10 +89,16 @@ export class CharacterSelectScene {
     ctx.fillRect(0, 0, w, h);
 
     // Title
-    ctx.fillStyle = PALETTE.ink;
+    ctx.fillStyle = PALETTE.accent;
     ctx.font = 'bold 20px monospace';
     ctx.textAlign = 'center';
     ctx.fillText('CHARACTER SELECT', w / 2, 30);
+
+    // Instructions
+    ctx.fillStyle = PALETTE.sub;
+    ctx.font = '10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press A/Cross on gamepad to join | Press Jump when ready', w / 2, 50);
 
     // Player slots
     const slotWidth = w / 4;

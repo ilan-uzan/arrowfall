@@ -115,6 +115,8 @@ export class InputRouter {
     return {
       left: map.left.some(k => this.keys[k]),
       right: map.right.some(k => this.keys[k]),
+      up: map.jump.some(k => this.keys[k]),
+      down: map.shoot.some(k => this.keys[k]),
       jumpPressed: jumpPressed || map.jump.some(k => this.keys[k]),
       shootPressed: shootPressed || map.shoot.some(k => this.keys[k]),
       pausePressed: map.pause.some(k => this.keys[k]),
