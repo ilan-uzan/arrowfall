@@ -1,5 +1,5 @@
 // Arena Scene - Main game loop
-import { PALETTE, SCENES, GRAVITY, MOVE_ACC, MAX_SPEED, JUMP_VEL, COYOTE_MS, JUMP_BUFFER_MS, ARROW_SPEED, START_ARROWS, TILE } from '../constants.js';
+import { PALETTE, SCENES, GRAVITY, MOVE_ACC, MAX_SPEED, JUMP_VEL, COYOTE_MS, JUMP_BUFFER_MS, ARROW_SPEED, START_ARROWS, TILE, PLAYER_COLORS } from '../constants.js';
 import { Player } from '../entities/Player.js';
 import { Arrow } from '../entities/Arrow.js';
 import { Level } from '../world/Level.js';
@@ -69,12 +69,22 @@ export class ArenaScene {
 
   enter() {
     // Setup players from character select
-    this.players = this.game.players.map((config, index) => {
-      const spawn = this.level.spawns[`p${config.id}`] || this.level.spawns.p1;
-      return new Player(spawn[0], spawn[1], config.id, config.color, this.game);
-    });
+    if (this.game.players && this.game.players.length > 0) {
+      this.players = this.game.players.map((config) => {
+        const spawnKey = `p${config.id}`;
+        const spawn = this.level.spawns[spawnKey] || this.level.spawns.p1 || [32, 128];
+        return new Player(spawn[0], spawn[1], config.id, config.color, this.game);
+      });
+    } else {
+      // Fallback - create default players
+      this.players = [
+        new Player(32, 128, 1, PLAYER_COLORS[0], this.game),
+        new Player(288, 128, 2, PLAYER_COLORS[1], this.game)
+      ];
+    }
 
     // Initialize round wins
+    this.roundWins = {};
     this.players.forEach(p => {
       this.roundWins[p.id] = 0;
     });
@@ -241,7 +251,7 @@ export class ArenaScene {
 
   endRound(winner) {
     if (winner) {
-      this.roundWins[winner.id]++;
+      this.roundWins[winner.id] = (this.roundWins[winner.id] || 0) + 1;
       
       // Check if match is over
       if (this.roundWins[winner.id] >= this.game.roundsToWin) {
@@ -257,6 +267,12 @@ export class ArenaScene {
           this.enter(); // Restart round
         }, 2000);
       }
+    } else {
+      // No winner (draw) - restart
+      this.state = 'roundEnd';
+      setTimeout(() => {
+        this.enter();
+      }, 2000);
     }
   }
 

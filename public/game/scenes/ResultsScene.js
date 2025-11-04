@@ -131,6 +131,12 @@ export class ResultsScene {
         ctx.fillText(`Player ${playerId}: ${wins} wins`, w / 2, y);
         y += 20;
       });
+    } else {
+      // Fallback if arena not available
+      ctx.fillStyle = PALETTE.sub;
+      ctx.font = '14px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Match Complete!', w / 2, h / 2);
     }
 
     // Buttons
