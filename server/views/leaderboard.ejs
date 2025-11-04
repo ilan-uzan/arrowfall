@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard - Arrowfall</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="leaderboard-container">
+    <h1 class="title">ARROWFALL LEADERBOARD</h1>
+    
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p class="subtitle" style="color: #ff6b6b;">Error: <%= error %></p>
+    <% } %>
+    
+    <% if (matches && matches.length > 0) { %>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Winner</th>
+            <th>Loser</th>
+            <th>Wins</th>
+            <th>KOs</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% matches.forEach(match => { %>
+            <tr>
+              <td><%= new Date(match.created_at).toLocaleDateString() %></td>
+              <td class="winner-name"><%= match.winner %></td>
+              <td><%= match.loser %></td>
+              <td><%= match.winner_kos %> - <%= match.loser_kos %></td>
+              <td><%= match.rounds_to_win %> rounds</td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } else { %>
+      <p class="subtitle">No matches yet. Play the game to see results here!</p>
+    <% } %>
+    
+    <div style="margin-top: 2rem; text-align: center;">
+      <a href="/" class="btn">← Back to Game</a>
+    </div>
+  </div>
+</body>
+</html>
+

@@ -1,7 +1,7 @@
 {
   "name": "arrowfall",
   "version": "1.0.0",
-  "description": "A 2-player local HTML5 Canvas arena game for hackathon",
+  "description": "A fast-paced local multiplayer archer brawler inspired by TowerFall",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",

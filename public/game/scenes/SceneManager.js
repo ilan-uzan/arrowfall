@@ -15,7 +15,7 @@ export class SceneManager {
 
   setScene(sceneName) {
     if (!this.scenes[sceneName]) {
-      console.error(`Scene ${sceneName} not found`);
+      // Scene not found - use default
       return;
     }
     

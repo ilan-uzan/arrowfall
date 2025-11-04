@@ -32,7 +32,7 @@ export class SurvivalScene {
       const levelData = data.levels[0];
       this.level = new Level(levelData);
     } catch (error) {
-      console.error('Failed to load level:', error);
+      // Fallback to default level
       this.level = this.createDefaultLevel();
     }
   }

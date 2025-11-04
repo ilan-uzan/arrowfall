@@ -14,14 +14,14 @@ app.set('views', path.join(__dirname, 'views'));
 
 // Routes
 app.get('/', (req, res) => {
-  res.render('index');
+  res.render('index', { title: 'Arrowfall' });
 });
 
 app.get('/leaderboard', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
     const rows = await getLeaderboard(limit);
-    res.render('leaderboard', { matches: rows });
+    res.render('leaderboard', { matches: rows || [], error: null });
   } catch (error) {
     console.error('Error fetching leaderboard:', error);
     res.render('leaderboard', { matches: [], error: 'Failed to load leaderboard' });

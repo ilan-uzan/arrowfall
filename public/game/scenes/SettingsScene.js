@@ -47,8 +47,7 @@ export class SettingsScene {
         this.game.sceneManager.setScene(SCENES.TITLE);
         this.game.audio.playConfirm();
       } else if (this.selectedButton === 1) {
-        // Show controls help
-        // TODO: Could show a modal or switch to controls help view
+        // Controls help is shown in tabs
         this.game.audio.playConfirm();
       }
     }

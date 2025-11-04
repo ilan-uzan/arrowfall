@@ -42,12 +42,10 @@ export class InputRouter {
 
   setupGamepad() {
     window.addEventListener('gamepadconnected', (e) => {
-      console.log('Gamepad connected:', e.gamepad.id);
       this.updateGamepads();
     });
 
     window.addEventListener('gamepaddisconnected', (e) => {
-      console.log('Gamepad disconnected:', e.gamepad.id);
       this.updateGamepads();
       // Remove bindings for disconnected pad
       for (const [playerId, binding] of Object.entries(this.playerBindings)) {

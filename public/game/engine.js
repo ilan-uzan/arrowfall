@@ -14,7 +14,6 @@ export class GameEngine {
   constructor() {
     this.canvas = document.getElementById('game-canvas');
     if (!this.canvas) {
-      console.error('Canvas not found!');
       return;
     }
 

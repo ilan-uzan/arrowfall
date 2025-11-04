@@ -75,8 +75,8 @@ export class CharacterSelectScene {
       }
     }
 
+    // Color cycling (future feature)
     if (actions.left || actions.right) {
-      // Cycle color (TODO: implement color selection)
       this.game.audio.playConfirm();
     }
   }

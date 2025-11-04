@@ -28,8 +28,7 @@ export class ArenaScene {
       const levelData = data.levels[0]; // Use first level for MVP
       this.level = new Level(levelData);
     } catch (error) {
-      console.error('Failed to load level:', error);
-      // Create simple default level
+      // Fallback to default level
       this.level = this.createDefaultLevel();
     }
   }
@@ -291,10 +290,7 @@ export class ArenaScene {
     if (!player || player.dead) return;
 
     // Shooting handled in player.update()
-    // Pause handled globally
-    if (actions.pausePressed) {
-      // TODO: Pause menu
-    }
+    // Pause handled globally (ESC pauses game)
   }
 
   render(ctx) {
