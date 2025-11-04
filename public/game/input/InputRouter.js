@@ -2,6 +2,7 @@
 export class InputRouter {
   constructor() {
     this.keys = {};
+    this.keyPresses = {}; // Track key presses for frame
     this.gamepads = [];
     this.playerBindings = {}; // playerId -> { type: 'keyboard'|'gamepad', id: number }
     
@@ -10,14 +11,32 @@ export class InputRouter {
   }
 
   setupKeyboard() {
+    this.keyPresses = {}; // Track key presses for frame
+    
     window.addEventListener('keydown', (e) => {
-      this.keys[e.key.toLowerCase()] = true;
-      this.keys[e.code] = true;
+      const key = e.key.toLowerCase();
+      const code = e.code;
+      
+      // Prevent default for game keys
+      if (['w', 'a', 's', 'd', ' ', 'f', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+        e.preventDefault();
+      }
+      
+      if (!this.keys[key]) {
+        this.keyPresses[key] = true;
+        this.keyPresses[code] = true;
+      }
+      this.keys[key] = true;
+      this.keys[code] = true;
     });
 
     window.addEventListener('keyup', (e) => {
-      this.keys[e.key.toLowerCase()] = false;
-      this.keys[e.code] = false;
+      const key = e.key.toLowerCase();
+      const code = e.code;
+      this.keys[key] = false;
+      this.keys[code] = false;
+      this.keyPresses[key] = false;
+      this.keyPresses[code] = false;
     });
   }
 
@@ -79,11 +98,25 @@ export class InputRouter {
 
     const map = mappings[playerId] || mappings[1];
     
+    // Check for key presses (not just held)
+    const jumpPressed = map.jump.some(k => this.keyPresses && this.keyPresses[k]);
+    const shootPressed = map.shoot.some(k => this.keyPresses && this.keyPresses[k]);
+    
+    // Clear key presses after reading
+    if (this.keyPresses) {
+      for (const key of map.jump) {
+        this.keyPresses[key] = false;
+      }
+      for (const key of map.shoot) {
+        this.keyPresses[key] = false;
+      }
+    }
+    
     return {
       left: map.left.some(k => this.keys[k]),
       right: map.right.some(k => this.keys[k]),
-      jumpPressed: map.jump.some(k => this.keys[k]),
-      shootPressed: map.shoot.some(k => this.keys[k]),
+      jumpPressed: jumpPressed || map.jump.some(k => this.keys[k]),
+      shootPressed: shootPressed || map.shoot.some(k => this.keys[k]),
       pausePressed: map.pause.some(k => this.keys[k]),
       aimX: 0,
       aimY: 0

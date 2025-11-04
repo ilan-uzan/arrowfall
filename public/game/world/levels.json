@@ -2,10 +2,10 @@
   "levels": [
     {
       "name": "Foundry",
-      "tileSize": 32,
-      "width": 30,
-      "height": 17,
-      "spawns": { "p1": [96, 384], "p2": [864, 384] },
+      "tileSize": 16,
+      "width": 20,
+      "height": 11,
+      "spawns": { "p1": [48, 144], "p2": [272, 144] },
       "solids": [
         [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
         [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],
@@ -28,10 +28,10 @@
     },
     {
       "name": "Sanctum",
-      "tileSize": 32,
-      "width": 30,
-      "height": 17,
-      "spawns": { "p1": [160, 384], "p2": [800, 384] },
+      "tileSize": 16,
+      "width": 20,
+      "height": 11,
+      "spawns": { "p1": [80, 144], "p2": [240, 144] },
       "solids": [
         [true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true, true],
         [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false],

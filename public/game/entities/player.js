@@ -38,9 +38,11 @@ export class Player {
       this.coyoteTime -= dt;
     }
 
-    // Jump buffer
+    // Jump buffer - capture jump press
     if (actions.jumpPressed) {
-      this.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      if (this.jumpBuffer <= 0) {
+        this.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      }
     }
     if (this.jumpBuffer > 0) {
       this.jumpBuffer -= dt;

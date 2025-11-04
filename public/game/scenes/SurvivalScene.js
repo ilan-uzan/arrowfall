@@ -69,6 +69,9 @@ export class SurvivalScene {
   }
 
   enter() {
+    // Auto-bind player 1 to keyboard for survival mode
+    this.game.inputRouter.bindKeyboard(1);
+    
     // Setup player
     const spawn = this.level.spawns.p1 || [160, 128];
     this.player = new Player(spawn[0], spawn[1], 1, PLAYER_COLORS[0], this.game);
@@ -144,17 +147,6 @@ export class SurvivalScene {
       const actions = this.game.inputRouter.getActions(1);
       if (actions) {
         this.player.update(dt, this.level, actions);
-        
-        // Handle player shooting
-        if (actions.shootPressed && !this.playerShootHeld) {
-          this.playerShootHeld = true;
-          if (this.player.fireArrow()) {
-            // Arrow already added to scene by fireArrow
-          }
-        }
-        if (!actions.shootPressed) {
-          this.playerShootHeld = false;
-        }
       }
     }
 

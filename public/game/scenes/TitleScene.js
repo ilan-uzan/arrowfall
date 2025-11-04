@@ -12,6 +12,8 @@ export class TitleScene {
   enter() {
     this.selectedButton = 0;
     this.animationTime = 0;
+    // Auto-bind player 1 to keyboard for menu navigation
+    this.game.inputRouter.bindKeyboard(1);
   }
 
   exit() {
