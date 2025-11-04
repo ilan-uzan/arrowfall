@@ -34,7 +34,8 @@ export const SCENES = {
   CHARACTER_SELECT: 'characterSelect',
   ARENA: 'arena',
   RESULTS: 'results',
-  SURVIVAL: 'survival'
+  SURVIVAL: 'survival',
+  SETTINGS: 'settings'
 };
 
 export const PLAYER_COLORS = [

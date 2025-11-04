@@ -8,6 +8,7 @@ import { CharacterSelectScene } from './scenes/CharacterSelectScene.js';
 import { ArenaScene } from './scenes/ArenaScene.js';
 import { ResultsScene } from './scenes/ResultsScene.js';
 import { SurvivalScene } from './scenes/SurvivalScene.js';
+import { SettingsScene } from './scenes/SettingsScene.js';
 
 export class GameEngine {
   constructor() {
@@ -59,6 +60,7 @@ export class GameEngine {
     this.sceneManager.registerScene(SCENES.ARENA, new ArenaScene(this));
     this.sceneManager.registerScene(SCENES.RESULTS, new ResultsScene(this));
     this.sceneManager.registerScene(SCENES.SURVIVAL, new SurvivalScene(this));
+    this.sceneManager.registerScene(SCENES.SETTINGS, new SettingsScene(this));
     
     // Start with title screen
     this.sceneManager.setScene(SCENES.TITLE);

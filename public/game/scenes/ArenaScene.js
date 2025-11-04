@@ -329,12 +329,19 @@ export class ArenaScene {
 
     // Render countdown
     if (this.state === 'countdown') {
+      const scale = this.countdown > 0 ? 1.0 + Math.sin(this.countdownTimer * 10) * 0.1 : 1.2;
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-w / 2, -h / 2);
+      
       ctx.fillStyle = PALETTE.accent;
       ctx.font = 'bold 32px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const text = this.countdown > 0 ? this.countdown.toString() : 'GO!';
       ctx.fillText(text, w / 2, h / 2);
+      ctx.restore();
     }
   }
 

@@ -342,12 +342,19 @@ export class SurvivalScene {
 
     // Render countdown
     if (this.state === 'countdown') {
+      const scale = this.countdown > 0 ? 1.0 + Math.sin(this.animationTime * 10) * 0.1 : 1.2;
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-w / 2, -h / 2);
+      
       ctx.fillStyle = PALETTE.accent;
       ctx.font = 'bold 32px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const text = this.countdown > 0 ? this.countdown.toString() : 'GO!';
       ctx.fillText(text, w / 2, h / 2);
+      ctx.restore();
     }
 
     // Render game over
@@ -368,22 +375,40 @@ export class SurvivalScene {
 
     // Top left: Wave, Score
     ctx.fillStyle = PALETTE.ink;
-    ctx.font = '12px monospace';
+    ctx.font = 'bold 12px monospace';
     ctx.textAlign = 'left';
-    ctx.fillText(`Wave: ${this.wave}`, 10, 20);
-    ctx.fillText(`Score: ${this.score}`, 10, 35);
+    ctx.fillText(`WAVE ${this.wave}`, 10, 18);
+    ctx.font = '11px monospace';
+    ctx.fillStyle = PALETTE.sub;
+    ctx.fillText(`Score: ${this.score}`, 10, 32);
 
     // Top right: Lives, Arrows
     ctx.textAlign = 'right';
-    ctx.fillText(`Lives: ${this.lives}`, w - 10, 20);
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = PALETTE.ink;
+    ctx.fillText(`LIVES: ${this.lives}`, w - 10, 18);
+    ctx.font = '11px monospace';
+    ctx.fillStyle = PALETTE.sub;
     if (this.player) {
-      ctx.fillText(`Arrows: ${this.player.arrows}`, w - 10, 35);
+      ctx.fillText(`Arrows: ${this.player.arrows}`, w - 10, 32);
     }
 
-    // NPC count
+    // NPC count (center)
     const aliveNPCs = this.npcs.filter(n => !n.dead).length;
     ctx.textAlign = 'center';
-    ctx.fillText(`NPCs: ${aliveNPCs}`, w / 2, 20);
+    ctx.font = '10px monospace';
+    ctx.fillStyle = aliveNPCs > 0 ? PALETTE.accent2 : PALETTE.accent;
+    ctx.fillText(`${aliveNPCs} NPCs`, w / 2, 18);
+
+    // Controls hint (bottom)
+    if (this.state === 'playing' && this.player && !this.player.dead) {
+      ctx.fillStyle = PALETTE.sub;
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.6;
+      ctx.fillText('A/D: Move | W/Space: Jump | S/F: Shoot', w / 2, h - 10);
+      ctx.globalAlpha = 1.0;
+    }
   }
 }
 

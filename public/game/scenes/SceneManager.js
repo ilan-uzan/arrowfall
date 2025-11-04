@@ -8,7 +8,8 @@ export class SceneManager {
       characterSelect: null,
       arena: null,
       results: null,
-      survival: null
+      survival: null,
+      settings: null
     };
   }
 
@@ -44,6 +45,8 @@ export class SceneManager {
       this.scenes.characterSelect = scene;
     } else if (name === 'survival') {
       this.scenes.survival = scene;
+    } else if (name === 'settings') {
+      this.scenes.settings = scene;
     }
   }
 

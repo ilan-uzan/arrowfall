@@ -5,7 +5,7 @@ export class TitleScene {
   constructor(game) {
     this.game = game;
     this.selectedButton = 0;
-    this.buttons = ['Play', 'Survival', 'How to Play'];
+    this.buttons = ['Play', 'Survival', 'Settings'];
     this.animationTime = 0;
   }
 
@@ -36,8 +36,8 @@ export class TitleScene {
         this.game.mode = 'single-player';
         this.game.sceneManager.setScene(SCENES.SURVIVAL);
       } else if (this.selectedButton === 2) {
-        // How to Play - show modal (TODO)
-        console.log('How to Play');
+        // Settings
+        this.game.sceneManager.setScene(SCENES.SETTINGS);
       }
       this.game.audio.playConfirm();
     }
@@ -64,7 +64,12 @@ export class TitleScene {
     ctx.font = 'bold 24px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('ARROWFALL', w / 2, h / 3);
+    ctx.fillText('ARROWFALL', w / 2, h / 3 - 20);
+
+    // Subtitle
+    ctx.fillStyle = PALETTE.sub;
+    ctx.font = '10px monospace';
+    ctx.fillText('Arrow Keys: Navigate | Space/W: Select', w / 2, h / 3 + 10);
 
     // Buttons
     const buttonY = h / 2;
