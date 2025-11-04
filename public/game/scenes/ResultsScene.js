@@ -18,7 +18,9 @@ export class ResultsScene {
       const entries = Object.entries(arena.roundWins);
       if (entries.length > 0) {
         const winnerId = entries.reduce((a, b) => {
-          return (arena.roundWins[a[0]] || 0) > (arena.roundWins[b[0]] || 0) ? a : b;
+          const winsA = arena.roundWins[a[0]] || 0;
+          const winsB = arena.roundWins[b[0]] || 0;
+          return winsA > winsB ? a : b;
         })[0];
         this.winner = parseInt(winnerId);
       } else {
