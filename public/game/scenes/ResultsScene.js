@@ -12,15 +12,18 @@ export class ResultsScene {
   }
 
   enter() {
-    // Find winner
-    const arena = this.game.sceneManager.scenes.arena || this.game.sceneManager.scenes[this.game.sceneManager.currentScene === 'arena' ? 'arena' : 'arena'];
+    // Find winner from arena scene
+    const arena = this.game.sceneManager.scenes.arena;
     if (arena && arena.roundWins) {
-      const winnerId = Object.keys(arena.roundWins)
-        .reduce((a, b) => {
-          return (arena.roundWins[a] || 0) > (arena.roundWins[b] || 0) ? a : b;
-        }, null);
-      
-      this.winner = winnerId ? parseInt(winnerId) : null;
+      const entries = Object.entries(arena.roundWins);
+      if (entries.length > 0) {
+        const winnerId = entries.reduce((a, b) => {
+          return (arena.roundWins[a[0]] || 0) > (arena.roundWins[b[0]] || 0) ? a : b;
+        })[0];
+        this.winner = parseInt(winnerId);
+      } else {
+        this.winner = null;
+      }
     } else {
       this.winner = null;
     }
