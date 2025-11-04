@@ -36,6 +36,8 @@ class Game {
     this.currentLevelIndex = 0;
     this.screenShake = { x: 0, y: 0, duration: 0 };
     this.hitPause = 0;
+    this.p1ShootHeld = false;
+    this.p2ShootHeld = false;
 
     // Load levels
     this.loadLevels();
@@ -70,21 +72,25 @@ class Game {
     this.level = this.levels[this.currentLevelIndex];
     this.state = STATE_READY;
     this.stateTimer = 2.0; // 2 seconds ready state
-    this.ui.showJoinOverlay();
     this.spawnPlayers();
     this.ui.updateWins(0, 0, this.roundsToWin);
+    // Allow single player mode - don't require gamepad
+    if (!this.gamepadManager.hasGamepad(2)) {
+      this.ui.showJoinOverlay();
+    } else {
+      this.ui.hideJoinOverlay();
+    }
   }
 
   startNewRound() {
     this.currentRound++;
     this.arrows = [];
     this.player1.respawn(this.level.spawns.p1[0], this.level.spawns.p1[1]);
-    if (this.gamepadManager.hasGamepad(2)) {
-      this.player2.respawn(this.level.spawns.p2[0], this.level.spawns.p2[1]);
-    } else {
-      // Player 2 not joined yet
-      this.player2.dead = true;
-    }
+    // Always spawn Player 2 - can use keyboard or gamepad
+    this.player2.respawn(this.level.spawns.p2[0], this.level.spawns.p2[1]);
+    this.player2.dead = false;
+    this.p1ShootHeld = false;
+    this.p2ShootHeld = false;
     this.state = STATE_READY;
     this.stateTimer = 2.0;
     this.ui.showBanner(`Round ${this.currentRound}`, 'ready', 2000);
@@ -93,9 +99,9 @@ class Game {
   spawnPlayers() {
     if (this.level) {
       this.player1.respawn(this.level.spawns.p1[0], this.level.spawns.p1[1]);
-      if (this.gamepadManager.hasGamepad(2)) {
-        this.player2.respawn(this.level.spawns.p2[0], this.level.spawns.p2[1]);
-      }
+      // Always spawn Player 2 - can use keyboard or gamepad
+      this.player2.respawn(this.level.spawns.p2[0], this.level.spawns.p2[1]);
+      this.player2.dead = false; // Ensure Player 2 is alive
     }
   }
 
@@ -224,12 +230,14 @@ class Game {
     if (!this.player1.dead) {
       this.player1.update(dt, this.level, p1Input);
     }
-    if (!this.player2.dead && this.gamepadManager.hasGamepad(2)) {
+    // Allow Player 2 to work with keyboard fallback if no gamepad
+    if (!this.player2.dead) {
       this.player2.update(dt, this.level, p2Input);
     }
 
-    // Handle shooting
-    if (p1Input.shoot && !this.player1.dead) {
+    // Handle shooting - check for new key press (not held)
+    if (p1Input.shoot && !this.player1.dead && !this.p1ShootHeld) {
+      this.p1ShootHeld = true;
       if (this.player1.fireArrow()) {
         const spawnX = this.player1.x + (this.player1.width / 2) + (this.player1.facing * 16);
         const spawnY = this.player1.y + (this.player1.height / 2);
@@ -244,8 +252,12 @@ class Game {
         this.arrows.push(arrow);
       }
     }
+    if (!p1Input.shoot) {
+      this.p1ShootHeld = false;
+    }
 
-    if (p2Input.shoot && !this.player2.dead && this.gamepadManager.hasGamepad(2)) {
+    if (p2Input.shoot && !this.player2.dead && !this.p2ShootHeld) {
+      this.p2ShootHeld = true;
       if (this.player2.fireArrow()) {
         const spawnX = this.player2.x + (this.player2.width / 2) + (this.player2.facing * 16);
         const spawnY = this.player2.y + (this.player2.height / 2);
@@ -259,6 +271,9 @@ class Game {
         );
         this.arrows.push(arrow);
       }
+    }
+    if (!p2Input.shoot) {
+      this.p2ShootHeld = false;
     }
 
     // Update arrows
@@ -274,8 +289,7 @@ class Game {
         this.screenShake = { x: 0, y: 0, duration: 0.12 };
         arrow.remove();
       }
-      if (!this.player2.dead && this.gamepadManager.hasGamepad(2) && 
-          arrow.checkPlayerCollision(this.player2)) {
+      if (!this.player2.dead && arrow.checkPlayerCollision(this.player2)) {
         this.player2.knockout();
         this.hitPause = 0.05;
         this.screenShake = { x: 0, y: 0, duration: 0.12 };
@@ -295,7 +309,7 @@ class Game {
       }
     }
 
-    if (!this.player2.dead && this.gamepadManager.hasGamepad(2) && this.player2.isStomping()) {
+    if (!this.player2.dead && this.player2.isStomping()) {
       const p2Feet = this.player2.getFeetBounds();
       const p1Head = this.player1.getHeadBounds();
       if (this.checkAABB(p2Feet, p1Head) && !this.player1.dead) {
@@ -313,8 +327,7 @@ class Game {
           arrow.remove();
         }
       }
-      if (this.gamepadManager.hasGamepad(2) && 
-          arrow.checkPickupCollision(this.player2) && !this.player2.dead) {
+      if (arrow.checkPickupCollision(this.player2) && !this.player2.dead) {
         if (this.player2.pickupArrow()) {
           arrow.remove();
         }
@@ -327,7 +340,7 @@ class Game {
     // Check for round end
     const alivePlayers = [];
     if (!this.player1.dead) alivePlayers.push(this.player1);
-    if (!this.player2.dead && this.gamepadManager.hasGamepad(2)) alivePlayers.push(this.player2);
+    if (!this.player2.dead) alivePlayers.push(this.player2);
 
     if (alivePlayers.length === 1) {
       // Round winner
@@ -397,7 +410,7 @@ class Game {
     if (this.player1) {
       this.player1.render(this.ctx);
     }
-    if (this.player2 && this.gamepadManager.hasGamepad(2)) {
+    if (this.player2) {
       this.player2.render(this.ctx);
     }
 
