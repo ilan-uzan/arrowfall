@@ -12,13 +12,13 @@ A 2-player local HTML5 Canvas arena game built for hackathon. Jump, dash, and fi
 
 ## Features
 
-- 2-player local multiplayer (keyboard + gamepad support)
-- Physics-based movement with coyote time and jump buffering
-- Arrow combat system with pickup mechanics
-- Stomp KO mechanics
-- Best-of-5 rounds match system
-- Leaderboard with match history
-- Gamepad support (PS5/Xbox controllers)
+- **Local Multiplayer**: 2-4 players (keyboard + gamepad support)
+- **Survival Mode**: Single-player mode with NPCs
+- **Physics**: Coyote time, jump buffering, wall-slide
+- **Arrow Combat**: Limited arrows, pickup mechanics, wall embedding
+- **Round System**: Best-of-5 rounds with match tracking
+- **Leaderboard**: Match history stored in Supabase
+- **NPCs**: Scripted enemies with classic game design (no AI)
 
 ## Installation
 
@@ -162,58 +162,46 @@ arrowfall/
 │       ├── index.ejs         # Landing page
 │       └── leaderboard.ejs   # Leaderboard page
 ├── public/
-│   ├── index.html            # Game canvas page
-│   ├── styles.css            # Global styles
+│   ├── index.html             # Game canvas page
+│   ├── styles.css             # Global styles
 │   └── game/
-│       ├── main.js            # Game loop & state machine
-│       ├── input.js           # Input manager
-│       ├── gamepad.js         # Gamepad manager
-│       ├── physics.js         # Physics utilities
-│       ├── ui.js              # UI manager
+│       ├── engine.js           # Main game engine
+│       ├── constants.js        # Game constants & Visual Bible
+│       ├── audio.js            # Web Audio API manager
 │       ├── entities/
-│       │   ├── player.js      # Player entity
-│       │   └── arrow.js       # Arrow entity
+│       │   ├── Player.js      # Player entity
+│       │   ├── Arrow.js       # Arrow entity
+│       │   └── NPC.js          # NPC entity (scripted)
+│       ├── scenes/
+│       │   ├── SceneManager.js      # Scene system
+│       │   ├── TitleScene.js        # Title screen
+│       │   ├── CharacterSelectScene.js  # Character select
+│       │   ├── ArenaScene.js         # Multiplayer arena
+│       │   ├── SurvivalScene.js     # Single-player survival
+│       │   └── ResultsScene.js       # Match results
+│       ├── input/
+│       │   └── InputRouter.js # Unified keyboard + gamepad
 │       └── world/
 │           ├── level.js       # Level system
 │           └── levels.json    # Level data
 ├── package.json
-├── .env.example
 └── README.md
 ```
 
-## Two-Minute Demo Script
+## Game Modes
 
-1. **Introduction** (10 seconds)
-   - "Arrowfall is a 2-player local arena game built with Node.js, Express, and HTML5 Canvas. It's inspired by TowerFall and features arrow combat with physics-based movement."
+### Local Multiplayer
+- Title Screen → "Play" → Character Select
+- 2-4 players can join (keyboard + gamepad)
+- Best-of-5 rounds match system
+- First to 5 wins takes the match
 
-2. **Landing Page** (15 seconds)
-   - Open `http://localhost:3000`
-   - Show landing page with controls explanation
-   - Click "Play" button
-
-3. **Gamepad Setup** (20 seconds)
-   - Show join overlay for Player 2
-   - Click "Add Controller" button
-   - Press START/OPTIONS on gamepad to join
-   - Demonstrate Player 1 moving with keyboard
-
-4. **Gameplay** (45 seconds)
-   - Play one quick round
-   - Show jumping with coyote time
-   - Demonstrate wall sliding
-   - Fire arrows and show embedding
-   - Pick up an embedded arrow
-   - Perform a stomp KO or arrow KO
-   - Show round transition and win banners
-
-5. **Match End** (20 seconds)
-   - Show match end modal after 5 wins
-   - Enter player names
-   - Click "Save Result"
-   - Navigate to Leaderboard page
-
-6. **Closing** (10 seconds)
-   - "The game uses Supabase for persistence, has clean modular code, and supports both keyboard and gamepad input. Check out the GitHub repo for the full codebase."
+### Survival Mode
+- Title Screen → "Survival" → Single-player
+- Fight waves of NPCs
+- 3 lives, score tracking
+- Waves increase in difficulty
+- NPCs use scripted behaviors (classic game design)
 
 ## Development
 
@@ -221,7 +209,6 @@ arrowfall/
 
 - `npm start` - Start production server
 - `npm run dev` - Start development server with nodemon
-- `npm run init:db` - Initialize database (prints SQL if needed)
 
 ### Code Style
 
