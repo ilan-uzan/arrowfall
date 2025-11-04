@@ -32,6 +32,16 @@ export class SceneManager {
 
   registerScene(name, scene) {
     this.scenes[name] = scene;
+    // Also store by scene name for easy access
+    if (name === 'arena') {
+      this.scenes.arena = scene;
+    } else if (name === 'results') {
+      this.scenes.results = scene;
+    } else if (name === 'title') {
+      this.scenes.title = scene;
+    } else if (name === 'characterSelect') {
+      this.scenes.characterSelect = scene;
+    }
   }
 
   update(dt) {

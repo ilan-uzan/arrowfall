@@ -13,13 +13,17 @@ export class ResultsScene {
 
   enter() {
     // Find winner
-    const winnerId = Object.keys(this.game.sceneManager.scenes.arena.roundWins || {})
-      .reduce((a, b) => {
-        const arena = this.game.sceneManager.scenes.arena;
-        return (arena.roundWins[a] || 0) > (arena.roundWins[b] || 0) ? a : b;
-      }, null);
-    
-    this.winner = winnerId ? parseInt(winnerId) : null;
+    const arena = this.game.sceneManager.scenes.arena || this.game.sceneManager.scenes[this.game.sceneManager.currentScene === 'arena' ? 'arena' : 'arena'];
+    if (arena && arena.roundWins) {
+      const winnerId = Object.keys(arena.roundWins)
+        .reduce((a, b) => {
+          return (arena.roundWins[a] || 0) > (arena.roundWins[b] || 0) ? a : b;
+        }, null);
+      
+      this.winner = winnerId ? parseInt(winnerId) : null;
+    } else {
+      this.winner = null;
+    }
     this.selectedButton = 0;
     this.animationTime = 0;
     this.particles = [];
