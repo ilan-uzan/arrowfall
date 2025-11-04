@@ -142,9 +142,12 @@ export class Player {
       const spawnX = this.x + (this.width / 2) + (this.facing * 12);
       const spawnY = this.y + (this.height / 2);
       const arrow = new Arrow(spawnX, spawnY, this.facing * ARROW_SPEED, 0, this.id, this.game);
-      const arena = this.game.sceneManager.scenes[SCENES.ARENA];
+      const arena = this.game.sceneManager.scenes.arena;
+      const survival = this.game.sceneManager.scenes.survival;
       if (arena) {
         arena.arrows.push(arrow);
+      } else if (survival) {
+        survival.arrows.push(arrow);
       }
       this.game.audio.playShoot();
       return true;

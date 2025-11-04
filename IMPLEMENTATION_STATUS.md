@@ -14,14 +14,14 @@
 9. ResultsScene - match results
 10. Game Engine - proper canvas rendering with scaling
 11. Physics - AABB collisions with Visual Bible constants
-12. Entities - Player, Arrow, Powerup, AI Bot
-13. Single-Player Survival mode
+12. Entities - Player, Arrow, Powerup, NPC
+13. Single-Player Survival mode with NPCs
 14. Supabase MCP setup
 
 ## 📋 Next Steps
 1. Rebuild main game engine with proper structure
 2. Create ArenaScene with proper game loop
-3. Implement single-player mode with AI
+3. Implement single-player survival mode with NPCs
 4. Set up Supabase MCP with proper schema
 5. Add power-ups and effects
 6. Polish UI and HUD
@@ -52,7 +52,7 @@
     Player.js           🚧 (needs rebuild)
     Arrow.js            🚧 (needs rebuild)
     Powerup.js          🚧
-    AIBot.js            🚧
+    NPC.js              ✅
   physics.js            🚧 (needs rebuild)
   engine.js             🚧 (main game engine)
 ```

@@ -5,7 +5,7 @@ export class TitleScene {
   constructor(game) {
     this.game = game;
     this.selectedButton = 0;
-    this.buttons = ['Play', 'How to Play', 'Credits'];
+    this.buttons = ['Play', 'Survival', 'How to Play'];
     this.animationTime = 0;
   }
 
@@ -27,14 +27,15 @@ export class TitleScene {
 
     if (actions.jumpPressed || actions.shootPressed) {
       if (this.selectedButton === 0) {
-        // Play
+        // Play - go to character select for multiplayer
         this.game.sceneManager.setScene(SCENES.CHARACTER_SELECT);
       } else if (this.selectedButton === 1) {
+        // Survival Mode - single player with NPCs
+        this.game.mode = 'single-player';
+        this.game.sceneManager.setScene(SCENES.SURVIVAL);
+      } else if (this.selectedButton === 2) {
         // How to Play - show modal (TODO)
         console.log('How to Play');
-      } else if (this.selectedButton === 2) {
-        // Credits - show modal (TODO)
-        console.log('Credits');
       }
       this.game.audio.playConfirm();
     }

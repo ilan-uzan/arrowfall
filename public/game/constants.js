@@ -33,7 +33,8 @@ export const SCENES = {
   TITLE: 'title',
   CHARACTER_SELECT: 'characterSelect',
   ARENA: 'arena',
-  RESULTS: 'results'
+  RESULTS: 'results',
+  SURVIVAL: 'survival'
 };
 
 export const PLAYER_COLORS = [
