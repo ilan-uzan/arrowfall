@@ -311,18 +311,18 @@ export class ArenaScene {
     }
   }
 
-      handleInput(actions, playerId) {
-        if (this.state !== 'playing') return;
-        
-        // Find player efficiently
-        let player = null;
-        for (const p of this.players) {
-          if (p.id === playerId) {
-            player = p;
-            break;
-          }
-        }
-        if (!player || player.dead) return;
+  handleInput(actions, playerId) {
+    if (this.state !== 'playing') return;
+    
+    // Find player efficiently
+    let player = null;
+    for (const p of this.players) {
+      if (p.id === playerId) {
+        player = p;
+        break;
+      }
+    }
+    if (!player || player.dead) return;
 
     // Shooting handled in player.update()
     // Pause handled globally (Options/Start pauses game)
@@ -384,67 +384,67 @@ export class ArenaScene {
   renderHUD(ctx) {
     const { w, h } = this.game.view;
 
-        // Top corners: Player wins (optimized loop)
-        for (let index = 0; index < this.players.length; index++) {
-          const player = this.players[index];
-          if (!player) continue;
-          
-          const x = index === 0 ? 10 : w - 10;
-          const y = 18;
-          ctx.textAlign = index === 0 ? 'left' : 'right';
-          ctx.fillStyle = player.color;
-          ctx.font = 'bold 12px monospace';
-          ctx.fillText(`P${player.id}`, x, y);
-          
-          // Win dots
-          ctx.font = '10px monospace';
-          const wins = this.roundWins[player.id] || 0;
-          const dotsY = y + 15;
-          for (let i = 0; i < 5; i++) {
-            ctx.fillStyle = i < wins ? player.color : PALETTE.bg1;
-            ctx.fillRect(x + (index === 0 ? i * 8 : -(i + 1) * 8), dotsY, 6, 6);
-          }
-          
-          // Arrows
-          ctx.fillStyle = PALETTE.sub;
-          ctx.font = '9px monospace';
-          ctx.fillText(`${player.arrows} arrows`, x, dotsY + 12);
-          
-          // Dead indicator
-          if (player.dead) {
-            ctx.fillStyle = PALETTE.accent2;
-            ctx.font = '10px monospace';
-            ctx.fillText('DEAD', x, dotsY + 25);
-          }
-        }
+    // Top corners: Player wins (optimized loop)
+    for (let index = 0; index < this.players.length; index++) {
+      const player = this.players[index];
+      if (!player) continue;
+      
+      const x = index === 0 ? 10 : w - 10;
+      const y = 18;
+      ctx.textAlign = index === 0 ? 'left' : 'right';
+      ctx.fillStyle = player.color;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText(`P${player.id}`, x, y);
+      
+      // Win dots
+      ctx.font = '10px monospace';
+      const wins = this.roundWins[player.id] || 0;
+      const dotsY = y + 15;
+      for (let i = 0; i < 5; i++) {
+        ctx.fillStyle = i < wins ? player.color : PALETTE.bg1;
+        ctx.fillRect(x + (index === 0 ? i * 8 : -(i + 1) * 8), dotsY, 6, 6);
+      }
+      
+      // Arrows
+      ctx.fillStyle = PALETTE.sub;
+      ctx.font = '9px monospace';
+      ctx.fillText(`${player.arrows} arrows`, x, dotsY + 12);
+      
+      // Dead indicator
+      if (player.dead) {
+        ctx.fillStyle = PALETTE.accent2;
+        ctx.font = '10px monospace';
+        ctx.fillText('DEAD', x, dotsY + 25);
+      }
+    }
 
-        // Round info (center top) - optimized
-        if (this.state === 'playing') {
-          // Count alive players efficiently
-          let aliveCount = 0;
-          for (const player of this.players) {
-            if (!player.dead) aliveCount++;
-          }
-          
-          ctx.fillStyle = aliveCount > 1 ? PALETTE.accent : PALETTE.accent2;
-          ctx.font = '10px monospace';
-          ctx.textAlign = 'center';
-          
-          // Calculate round number efficiently
-          let totalWins = 0;
-          for (const wins of Object.values(this.roundWins)) {
-            totalWins += wins;
-          }
-          const roundNum = totalWins + 1;
-          ctx.fillText(`Round ${roundNum}`, w / 2, 18);
-          
-          // Show controller status
-          if (aliveCount === 0) {
-            ctx.fillStyle = PALETTE.accent2;
-            ctx.font = '10px monospace';
-            ctx.fillText('Controller disconnected!', w / 2, 32);
-          }
-        }
+    // Round info (center top) - optimized
+    if (this.state === 'playing') {
+      // Count alive players efficiently
+      let aliveCount = 0;
+      for (const player of this.players) {
+        if (!player.dead) aliveCount++;
+      }
+      
+      ctx.fillStyle = aliveCount > 1 ? PALETTE.accent : PALETTE.accent2;
+      ctx.font = '10px monospace';
+      ctx.textAlign = 'center';
+      
+      // Calculate round number efficiently
+      let totalWins = 0;
+      for (const wins of Object.values(this.roundWins)) {
+        totalWins += wins;
+      }
+      const roundNum = totalWins + 1;
+      ctx.fillText(`Round ${roundNum}`, w / 2, 18);
+      
+      // Show controller status
+      if (aliveCount === 0) {
+        ctx.fillStyle = PALETTE.accent2;
+        ctx.font = '10px monospace';
+        ctx.fillText('Controller disconnected!', w / 2, 32);
+      }
+    }
   }
 }
 
