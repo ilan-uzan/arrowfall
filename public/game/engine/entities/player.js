@@ -48,6 +48,18 @@ export class Player {
       // Horizontal movement - use axisX proportionally for smooth control
       let targetVx = 0;
       
+      // Debug: Log input values if there's unexpected movement
+      // (Remove this after debugging)
+      if (this.vx < -10 || this.vx > 10) {
+        console.log(`Player ${this.id} moving unexpectedly:`, {
+          vx: this.vx,
+          axisX: actions.axisX,
+          left: actions.left,
+          right: actions.right,
+          targetVx: targetVx
+        });
+      }
+      
       // Priority: axisX > boolean left/right
       // Only use axisX if it's significant (above deadzone threshold)
       if (actions.axisX !== undefined && !isNaN(actions.axisX) && Math.abs(actions.axisX) > 0.15) {
@@ -72,6 +84,12 @@ export class Player {
       // Ensure targetVx is valid (not NaN or Infinity)
       if (isNaN(targetVx) || !isFinite(targetVx)) {
         targetVx = 0;
+      }
+      
+      // If no input, ensure we're stopping (apply stronger friction)
+      if (targetVx === 0 && Math.abs(this.vx) > 5) {
+        // Apply extra friction when stopping
+        this.vx *= 0.9;
       }
 
       // Apply movement BEFORE physics update (uses previous frame's ground state)
