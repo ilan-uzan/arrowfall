@@ -50,7 +50,7 @@ export class Player {
       
       // Priority: axisX > boolean left/right
       // Only use axisX if it's significant (above deadzone threshold)
-      if (actions.axisX !== undefined && Math.abs(actions.axisX) > 0.15) {
+      if (actions.axisX !== undefined && !isNaN(actions.axisX) && Math.abs(actions.axisX) > 0.15) {
         // Use axisX value proportionally (0 to 1) scaled to MAX_VEL_X
         // This gives smooth, proportional control instead of instant full speed
         targetVx = actions.axisX * MAX_VEL_X;
@@ -58,14 +58,20 @@ export class Player {
       } else {
         // Only use boolean left/right if axisX is not significant or undefined
         // This prevents conflicts between axisX and boolean left/right
-        if (actions.left && !actions.right) {
+        // Explicitly check that left/right are boolean true (not just truthy)
+        if (actions.left === true && actions.right !== true) {
           targetVx = -MAX_VEL_X;
           this.facing = -1;
-        } else if (actions.right && !actions.left) {
+        } else if (actions.right === true && actions.left !== true) {
           targetVx = MAX_VEL_X;
           this.facing = 1;
         }
         // If neither left nor right, targetVx stays 0
+      }
+      
+      // Ensure targetVx is valid (not NaN or Infinity)
+      if (isNaN(targetVx) || !isFinite(targetVx)) {
+        targetVx = 0;
       }
 
       // Apply movement BEFORE physics update (uses previous frame's ground state)

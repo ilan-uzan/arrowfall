@@ -95,9 +95,19 @@ export class PhysicsSystem {
     // Clamp dt to prevent issues
     dt = Math.max(0, Math.min(dt, 0.1));
     
+    // Validate and clamp targetVx
+    if (isNaN(targetVx) || !isFinite(targetVx)) {
+      targetVx = 0;
+    }
+    
     // Clamp targetVx to max velocity
     if (Math.abs(targetVx) > MAX_VEL_X) {
       targetVx = targetVx > 0 ? MAX_VEL_X : -MAX_VEL_X;
+    }
+    
+    // Ensure entity.vx is valid
+    if (isNaN(entity.vx) || !isFinite(entity.vx)) {
+      entity.vx = 0;
     }
     
     if (inAir) {
@@ -119,9 +129,14 @@ export class PhysicsSystem {
       }
     }
     
-    // Final clamp velocity
+    // Final clamp velocity and validate
     if (Math.abs(entity.vx) > MAX_VEL_X) {
       entity.vx = entity.vx > 0 ? MAX_VEL_X : -MAX_VEL_X;
+    }
+    
+    // Final safety check
+    if (isNaN(entity.vx) || !isFinite(entity.vx)) {
+      entity.vx = 0;
     }
   }
 
