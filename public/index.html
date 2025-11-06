@@ -7,24 +7,9 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div id="game-container">
+  <div id="app">
     <canvas id="game-canvas"></canvas>
   </div>
-  <script type="module" src="/game/engine.js"></script>
-  <script>
-    // Request gamepad access on user interaction
-    window.addEventListener('click', () => {
-      if (navigator.getGamepads) {
-        navigator.getGamepads(); // Request gamepad access
-      }
-    });
-    
-    window.addEventListener('keydown', () => {
-      if (navigator.getGamepads) {
-        navigator.getGamepads(); // Request gamepad access
-      }
-    });
-  </script>
+  <script type="module" src="/game/main.js"></script>
 </body>
 </html>
-

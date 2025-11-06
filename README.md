@@ -1,16 +1,16 @@
 # Arrowfall
 
-A fast-paced local multiplayer archer brawler inspired by TowerFall Ascension. Battle with arrows, wall-jump, and dodge in pixel-perfect retro arenas.
+A fast-paced local multiplayer archer brawler inspired by TowerFall Ascension. Controller-only browser game with Versus and Survival modes.
 
 ## 🎮 Features
 
-- **Local Multiplayer**: 2-4 players (keyboard + gamepad)
-- **Survival Mode**: Single-player with NPCs (scripted behaviors)
-- **Controller Support**: PS5, Xbox, 3rd party Bluetooth controllers
+- **Versus Mode**: 2-4 players local multiplayer (controller-only)
+- **Survival Mode**: 1 player vs 2 NPC archers with escalating difficulty
+- **Controller Support**: Xbox, PS5, generic XInput controllers
 - **Physics**: Coyote time, jump buffering, wall-slide mechanics
-- **Arrow Combat**: Limited arrows, pickup mechanics, wall embedding
-- **Round System**: Best-of-5 rounds with match tracking
-- **Leaderboard**: Match history stored in Supabase
+- **Arrow Combat**: Limited arrows (3 start, 5 max), pickup mechanics, wall embedding
+- **Round System**: Best-of-5 rounds (first to 3 wins)
+- **Database**: Supabase integration for scores and survival runs
 
 ## 🚀 Quick Start
 
@@ -19,96 +19,115 @@ A fast-paced local multiplayer archer brawler inspired by TowerFall Ascension. B
 npm install
 
 # Create .env file
-echo "SUPABASE_URL=https://bnkkcumuvzzkxofxdatz.supabase.co" > .env
-echo "SUPABASE_KEY=your_key_here" >> .env
+echo "SUPABASE_URL=your_supabase_url" > .env
+echo "SUPABASE_SERVICE_ROLE_KEY=your_service_key" >> .env
 echo "PORT=3000" >> .env
 
 # Start server
-npm run dev
+npm start
 
 # Open http://localhost:3000
 ```
 
-## 🎯 Controls (PS5 Controller Only)
+## 🎯 Controls (Controller-Only)
 
-### PS5 DualSense Controller
+### Xbox / PS5 Controller
 - **Left Stick** or **D-Pad** - Move
-- **Cross (X)** - Jump
-- **Square** or **R2** - Shoot
-- **Options** - Pause / Join Game
+- **A / Cross (×)** - Jump
+- **X / Square (☐)** or **RT / R2** - Shoot
+- **Start / Options** - Pause / Join Game
+- **LB / L1** or **RB / R1** - Change Color (in lobby)
 
 ### Menu Navigation
 - **Left Stick** or **D-Pad** - Navigate
-- **Cross (X)** - Select
+- **A / Cross (×)** - Select
 
 ## 📁 Project Structure
 
 ```
 arrowfall/
-├── server/
-│   ├── index.js          # Express server & API
-│   ├── db/db.js          # Supabase client
-│   └── views/            # EJS templates
+├── server.js              # Express server
+├── routes/
+│   └── api.js             # API routes (scores, runs)
+├── db/
+│   └── supabase.js        # Supabase client
 ├── public/
-│   ├── index.html        # Game page
-│   ├── styles.css        # Global styles
+│   ├── index.html         # Entry point
+│   ├── styles.css         # Global styles
 │   └── game/
-│       ├── engine.js     # Main game engine
-│       ├── constants.js  # Visual Bible constants
-│       ├── audio.js      # Web Audio API
-│       ├── entities/     # Player, Arrow, NPC
-│       ├── scenes/       # Title, Arena, Settings, etc.
-│       ├── input/        # InputRouter (keyboard + gamepad)
-│       └── world/        # Level system
-└── README.md
+│       ├── main.js        # Game boot + scene router
+│       ├── scenes/         # Game scenes
+│       │   ├── title.js
+│       │   ├── modeSelect.js
+│       │   ├── lobby.js
+│       │   ├── versus.js
+│       │   ├── survival.js
+│       │   └── results.js
+│       └── engine/
+│           ├── loop.js    # Fixed timestep game loop
+│           ├── world.js   # Arena (single map)
+│           ├── physics.js # Movement & collision
+│           ├── collisions.js
+│           ├── render.js  # Rendering pipeline
+│           ├── fx.js      # Particles, screen shake
+│           ├── constants.js
+│           ├── input/
+│           │   ├── gamepad.js
+│           │   └── router.js
+│           └── entities/
+│               ├── player.js
+│               ├── arrow.js
+│               └── npc.js
+└── package.json
 ```
 
-## 🎨 Settings
+## 🎯 Game Rules
 
-Access Settings from the title screen to:
-- View connected controllers (PS5/Xbox/3rd party Bluetooth)
-- See keyboard controls
-- See gamepad controls
+- **Arena**: Single TowerFall-style map (16×16 tiles, 320×180 logical)
+- **Arrows**: Start with 3, max 5. Arrows stick in walls and can be picked up
+- **Death**: Instant death by arrow hit or stomp
+- **Double-KO**: If last two players die same frame, no one scores; replay round
+- **Versus**: Best-of-5 (first to 3 wins)
+- **Survival**: Fight waves of 2 NPCs; difficulty scales each wave
 
-## 🎮 Game Modes
+## 🗄️ Database (Supabase)
 
-### Local Multiplayer
-1. Title Screen → "Play"
-2. Character Select → 2-4 players join
-3. Arena → Fight to 5 wins
-4. Results → Match summary
-
-### Survival Mode
-1. Title Screen → "Survival"
-2. Fight waves of NPCs
-3. 3 lives, score tracking
-4. Waves increase in difficulty
+Tables created via Supabase MCP:
+- `scores` - Versus and survival scores
+- `survival_runs` - Survival mode runs (wave, duration)
+- `profiles` - User profiles (optional)
 
 ## 🛠️ Tech Stack
 
-- **Backend**: Node.js, Express.js
-- **Frontend**: HTML5 Canvas, JavaScript (ES6 modules)
+- **Server**: Node.js + Express (ESM)
+- **Frontend**: Plain JavaScript (ES6 modules)
 - **Database**: Supabase (PostgreSQL)
-- **Templating**: EJS
-- **Audio**: Web Audio API
+- **Rendering**: Canvas 2D (pixel-perfect)
+- **Input**: Browser Gamepad API
 
 ## 📝 API Endpoints
 
-- `POST /api/match` - Save match result
-- `GET /api/leaderboard` - Get match history
-- `GET /leaderboard` - Leaderboard page
+- `GET /api/health` - Health check
+- `POST /api/score` - Save score (mode: 'versus' | 'survival', value: number)
+- `POST /api/run` - Save survival run (wave, duration_seconds)
 
-## 🎯 Development
+## 🎨 Visuals
+
+- Pixel art style (3× scale, 320×180 logical resolution)
+- Minimal palette (dark background + bright player colors)
+- Draw order: BG → tiles → stuck arrows → NPCs → players → active arrows → particles → HUD
+- Visual FX: particles, screen shake, hit flash (no audio)
+
+## 🧪 Development
 
 ```bash
-npm run dev    # Development with nodemon
-npm start      # Production server
+# Development mode (auto-reload)
+npm run dev
+
+# Production mode
+npm start
 ```
 
 ## 📄 License
 
 MIT
-
-## 👤 Author
-
-Built for hackathon by ilan-uzan
