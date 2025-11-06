@@ -12,6 +12,9 @@ export class SurvivalScene {
     this.npcs = [];
     this.arrows = [];
     this.wave = 1;
+    this.countdown = 0;
+    this.countdownText = '';
+    this.roundActive = false;
     this.collisions = new CollisionSystem();
   }
 
@@ -36,6 +39,12 @@ export class SurvivalScene {
       
       // Create NPCs
       this.spawnWave();
+      
+      // Countdown
+      this.countdown = 3.0;
+      this.countdownText = '3';
+      this.roundActive = false;
+      
       console.log('Survival scene entered');
     } catch (error) {
       console.error('Error entering survival scene:', error);
@@ -69,17 +78,38 @@ export class SurvivalScene {
   }
 
   update(dt) {
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60;
+    }
+
+    // Countdown
+    if (this.countdown > 0) {
+      this.countdown -= dt;
+      if (this.countdown > 2) {
+        this.countdownText = '3';
+      } else if (this.countdown > 1) {
+        this.countdownText = '2';
+      } else if (this.countdown > 0) {
+        this.countdownText = '1';
+      } else {
+        this.countdownText = 'GO!';
+        this.roundActive = true;
+        setTimeout(() => {
+          this.countdownText = '';
+        }, 500);
+      }
+      return;
+    }
+    
+    if (!this.roundActive) return;
+
     if (!this.player || this.player.dead) {
       // Game over
       this.game.matchWinner = null;
       this.game.matchWave = this.wave;
       this.game.setScene('results');
       return;
-    }
-    
-    // Validate dt
-    if (!dt || dt <= 0 || dt > 0.1) {
-      dt = 1/60;
     }
     
     try {
@@ -241,6 +271,15 @@ export class SurvivalScene {
     // HUD
     const { w, h } = VIEW;
     
+    // Countdown
+    if (this.countdown > 0) {
+      ctx.fillStyle = PALETTE.accent;
+      ctx.font = 'bold 24px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(this.countdownText, w / 2, h / 2);
+    }
+    
     // Wave counter (top)
     ctx.fillStyle = PALETTE.bg1;
     ctx.globalAlpha = 0.8;
@@ -258,7 +297,7 @@ export class SurvivalScene {
     ctx.fillText(`Arrows: ${this.player.arrows}`, 80, 5);
     
     // NPCs alive
-    const aliveNPCs = this.npcs.filter(n => !n.dead).length;
+    const aliveNPCs = this.npcs.filter(n => n && !n.dead).length;
     ctx.fillStyle = PALETTE.accent2;
     ctx.fillText(`NPCs: ${aliveNPCs}`, 150, 5);
   }

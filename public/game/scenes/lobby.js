@@ -104,7 +104,10 @@ export class LobbyScene {
     ctx.font = 'bold 16px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('LOBBY - PRESS A/× TO JOIN', w / 2, 30);
+    ctx.fillText('MULTIPLAYER LOBBY', w / 2, 30);
+    ctx.fillStyle = PALETTE.sub;
+    ctx.font = '10px monospace';
+    ctx.fillText('Press A/× to Join', w / 2, 45);
 
     // Player slots
     const slotY = 60;

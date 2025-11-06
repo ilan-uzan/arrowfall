@@ -5,7 +5,7 @@ export class ModeSelectScene {
   constructor(game) {
     this.game = game;
     this.selectedButton = 0;
-    this.buttons = ['Versus (2-4 Players)', 'Survival (1 Player)'];
+    this.buttons = ['Multiplayer', 'Survival Mode'];
     this.animationTime = 0;
     this.lastNavTime = 0;
   }
@@ -43,7 +43,7 @@ export class ModeSelectScene {
     // Select mode
     if (actions.jump || actions.shoot) {
       if (this.selectedButton === 0) {
-        // Versus mode
+        // Multiplayer mode
         this.game.setScene('lobby').catch(err => {
           console.error('Failed to switch to lobby:', err);
         });

@@ -78,9 +78,12 @@ export class NPC {
   }
 
   updateBehavior(dt, world, player, arrows) {
-    if (!player || !world) return null;
+    if (!player || !world || player.dead) return null;
     
     try {
+      // Clamp dt to prevent issues
+      dt = Math.max(0, Math.min(dt, 0.1));
+      
       this.stateTimer += dt;
       this.lastShootTime += dt;
 
@@ -88,6 +91,9 @@ export class NPC {
       const dy = player.y - this.y;
       const distSq = dx * dx + dy * dy;
       const dist = Math.sqrt(distSq);
+      
+      // Validate player position
+      if (isNaN(player.x) || isNaN(player.y)) return null;
 
     // Evade if player is too close (80^2 = 6400)
     if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {

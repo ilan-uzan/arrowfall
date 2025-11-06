@@ -36,16 +36,18 @@ export class PhysicsSystem {
 
       // Gravity
       if (entity.vy === undefined) entity.vy = 0;
-      entity.vy += GRAVITY * dt;
+      const clampedDt = Math.max(0, Math.min(dt, 0.1));
+      entity.vy += GRAVITY * clampedDt;
       const maxFallSpeed = 640;
       if (entity.vy > maxFallSpeed) {
         entity.vy = maxFallSpeed;
       }
 
-      // Update position
+      // Update position (use clamped dt)
       if (entity.vx === undefined) entity.vx = 0;
-      entity.x += entity.vx * dt;
-      entity.y += entity.vy * dt;
+      const clampedDt = Math.max(0, Math.min(dt, 0.1));
+      entity.x += entity.vx * clampedDt;
+      entity.y += entity.vy * clampedDt;
 
       // Check ground
       entity.wasOnGround = entity.onGround;
@@ -84,18 +86,32 @@ export class PhysicsSystem {
   }
 
   applyHorizontalMovement(entity, targetVx, dt = FIXED_DT, inAir = false) {
+    if (!entity || entity.vx === undefined) return;
+    
+    // Clamp dt to prevent issues
+    dt = Math.max(0, Math.min(dt, 0.1));
+    
     if (inAir) {
       // Air movement (reduced control)
       if (Math.abs(targetVx) > 0.1) {
         entity.vx = this.approach(entity.vx, targetVx, MOVE_ACC * dt * 0.65);
+      } else {
+        // Air friction
+        entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 0.3);
       }
     } else {
       // Ground movement
       if (Math.abs(targetVx) > 0.1) {
         entity.vx = this.approach(entity.vx, targetVx, MOVE_ACC * dt);
       } else {
-        entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 0.75); // Friction
+        // Ground friction (stronger)
+        entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 1.2);
       }
+    }
+    
+    // Clamp velocity
+    if (Math.abs(entity.vx) > MAX_VEL_X) {
+      entity.vx = entity.vx > 0 ? MAX_VEL_X : -MAX_VEL_X;
     }
   }
 
