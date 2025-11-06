@@ -99,12 +99,38 @@ export class InputRouter {
       }
       
       // Use D-Pad if stick is not active (for menu navigation)
-      const moveX = Math.abs(leftStickX) > DEADZONE ? leftStickX : dPadX;
-      const moveY = Math.abs(leftStickY) > DEADZONE ? leftStickY : dPadY;
+      // Only use stick if it's above deadzone, otherwise use D-Pad
+      let moveX = 0;
+      let moveY = 0;
       
-      // Normalize axis
-      const axisX = Math.abs(moveX) < DEADZONE ? 0 : moveX;
-      const axisY = Math.abs(moveY) < DEADZONE ? 0 : moveY;
+      if (Math.abs(leftStickX) > DEADZONE) {
+        moveX = leftStickX;
+      } else if (dPadX !== 0) {
+        moveX = dPadX;
+      }
+      
+      if (Math.abs(leftStickY) > DEADZONE) {
+        moveY = leftStickY;
+      } else if (dPadY !== 0) {
+        moveY = dPadY;
+      }
+      
+      // Normalize axis - apply deadzone scaling for smoother control
+      let axisX = 0;
+      let axisY = 0;
+      
+      if (Math.abs(moveX) > DEADZONE) {
+        // Apply deadzone scaling: map [DEADZONE, 1] to [0, 1]
+        const sign = moveX > 0 ? 1 : -1;
+        const magnitude = (Math.abs(moveX) - DEADZONE) / (1 - DEADZONE);
+        axisX = sign * magnitude;
+      }
+      
+      if (Math.abs(moveY) > DEADZONE) {
+        const sign = moveY > 0 ? 1 : -1;
+        const magnitude = (Math.abs(moveY) - DEADZONE) / (1 - DEADZONE);
+        axisY = sign * magnitude;
+      }
       
       // Button states with safe access
       const buttons = pad.buttons || [];
@@ -112,22 +138,22 @@ export class InputRouter {
       const button2Pressed = (buttons[GAMEPAD_BUTTONS.SHOOT]?.pressed) || false;
       const button9Pressed = (buttons[GAMEPAD_BUTTONS.PAUSE]?.pressed) || false;
     
-    // Track button states for single-frame detection
-    const key = `pad${gamepadIndex}`;
-    const lastState = this.lastButtonStates.get(key) || {};
-    
-    // Single-frame press detection (only true on transition from not pressed to pressed)
-    const jumpPressed = button0Pressed && !lastState[GAMEPAD_BUTTONS.JUMP];
-    const shootPressed = button2Pressed && !lastState[GAMEPAD_BUTTONS.SHOOT];
-    const pausePressed = button9Pressed && !lastState[GAMEPAD_BUTTONS.PAUSE];
-    
+      // Track button states for single-frame detection
+      const key = `pad${gamepadIndex}`;
+      const lastState = this.lastButtonStates.get(key) || {};
+      
+      // Single-frame press detection (only true on transition from not pressed to pressed)
+      const jumpPressed = button0Pressed && !lastState[GAMEPAD_BUTTONS.JUMP];
+      const shootPressed = button2Pressed && !lastState[GAMEPAD_BUTTONS.SHOOT];
+      const pausePressed = button9Pressed && !lastState[GAMEPAD_BUTTONS.PAUSE];
+      
       // Track axis states for single-frame navigation detection
       const lastAxisX = lastState.axisX || 0;
       const lastAxisY = lastState.axisY || 0;
-      const leftPressed = axisX < -DEADZONE && lastAxisX >= -DEADZONE;
-      const rightPressed = axisX > DEADZONE && lastAxisX <= DEADZONE;
-      const upPressed = axisY < -DEADZONE && lastAxisY >= -DEADZONE;
-      const downPressed = axisY > DEADZONE && lastAxisY <= DEADZONE;
+      const leftPressed = axisX < -0.15 && lastAxisX >= -0.15;
+      const rightPressed = axisX > 0.15 && lastAxisX <= 0.15;
+      const upPressed = axisY < -0.15 && lastAxisY >= -0.15;
+      const downPressed = axisY > 0.15 && lastAxisY <= 0.15;
       
       // Update last button states
       this.lastButtonStates.set(key, {
@@ -138,11 +164,18 @@ export class InputRouter {
         axisY: axisY
       });
       
+      // Only set left/right if axisX is significant (above deadzone threshold)
+      // This prevents false positives from small axis values
+      const left = axisX < -0.15;
+      const right = axisX > 0.15;
+      const up = axisY < -0.15;
+      const down = axisY > 0.15;
+      
       return {
-        left: axisX < -DEADZONE,
-        right: axisX > DEADZONE,
-        up: axisY < -DEADZONE,
-        down: axisY > DEADZONE,
+        left: left,
+        right: right,
+        up: up,
+        down: down,
         leftPressed: leftPressed,
         rightPressed: rightPressed,
         upPressed: upPressed,
