@@ -21,7 +21,8 @@ export class NPC {
     this.vx = 0;
     this.vy = 0;
     this.color = color;
-    this.facing = Math.random() > 0.5 ? 1 : -1; // Random initial facing
+    // Random initial facing - ensure it's either 1 or -1, not 0
+    this.facing = Math.random() > 0.5 ? 1 : -1;
     this.onGround = false;
     this.wasOnGround = false;
     this.touchingWall = { left: false, right: false };
@@ -36,7 +37,8 @@ export class NPC {
     this.stateTimer = 0;
     this.targetX = 0;
     this.targetY = 0;
-    this.patrolDirection = this.facing; // Start with same direction as facing
+    // Initialize patrolDirection independently - alternate between NPCs to prevent all moving same direction
+    this.patrolDirection = (id % 2 === 0) ? 1 : -1; // Alternate based on ID to ensure variety
     this.reactionDelay = 0.3;
     this.aimJitter = 8;
     this.lastShootTime = 0;
@@ -99,10 +101,14 @@ export class NPC {
       if (isNaN(player.x) || isNaN(player.y)) return null;
 
     // Evade if player is too close (80^2 = 6400)
+    // NPCs should evade independently, not all in the same direction
     if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {
       this.state = NPC_STATE.EVADE;
       this.stateTimer = 0;
-      this.patrolDirection = dx > 0 ? -1 : 1;
+      // Evade away from player, but add some randomness so NPCs don't all move the same way
+      const evadeDirection = dx > 0 ? -1 : 1;
+      // Add slight randomness to prevent all NPCs moving identically
+      this.patrolDirection = (Math.random() > 0.3) ? evadeDirection : -evadeDirection;
     }
 
     // Retrieve arrows if low on ammo (check every 0.5s)
@@ -141,15 +147,28 @@ export class NPC {
     
     switch (this.state) {
       case NPC_STATE.PATROL:
-        // Simple patrol: move back and forth
+        // Simple patrol: move back and forth independently
         const speed = MAX_VEL_X * 0.7 * (1 + this.wave * 0.04); // Scale with wave
+        
+        // Ensure patrolDirection is valid (1 or -1, not 0)
+        if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
+          this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
+        }
+        
         const targetVx = this.patrolDirection * speed;
         
-        // Apply movement using physics system with correct air state
-        if (this.physics) {
-          this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
+        // Validate targetVx
+        if (isNaN(targetVx) || !isFinite(targetVx)) {
+          // If invalid, stop and reset
+          this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
+          this.physics?.applyHorizontalMovement(this, 0, dt, inAir);
         } else {
-          this.vx = targetVx;
+          // Apply movement using physics system with correct air state
+          if (this.physics) {
+            this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
+          } else {
+            this.vx = targetVx;
+          }
         }
         
         this.facing = this.patrolDirection;
@@ -215,14 +234,24 @@ export class NPC {
         break;
 
       case NPC_STATE.EVADE:
-        // Jump away from player
+        // Jump away from player - ensure patrolDirection is valid
+        if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
+          this.patrolDirection = dx > 0 ? -1 : 1;
+        }
+        
         const evadeSpeed = this.patrolDirection * MAX_VEL_X * 0.8;
         
-        // Apply movement using physics system with correct air state
-        if (this.physics) {
-          this.physics.applyHorizontalMovement(this, evadeSpeed, dt, inAir);
+        // Validate evadeSpeed
+        if (isNaN(evadeSpeed) || !isFinite(evadeSpeed)) {
+          this.patrolDirection = dx > 0 ? -1 : 1;
+          this.physics?.applyHorizontalMovement(this, 0, dt, inAir);
         } else {
-          this.vx = evadeSpeed;
+          // Apply movement using physics system with correct air state
+          if (this.physics) {
+            this.physics.applyHorizontalMovement(this, evadeSpeed, dt, inAir);
+          } else {
+            this.vx = evadeSpeed;
+          }
         }
         
         this.facing = this.patrolDirection;
@@ -236,6 +265,8 @@ export class NPC {
         if (this.stateTimer > 1.0 || distSq > 22500) {
           this.state = NPC_STATE.PATROL;
           this.stateTimer = 0;
+          // Reset patrol direction when returning to patrol
+          this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
         }
         break;
 
@@ -258,6 +289,8 @@ export class NPC {
         if (!currentNearestArrow) {
           this.state = NPC_STATE.PATROL;
           this.stateTimer = 0;
+          // Reset patrol direction when returning to patrol
+          this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
           break;
         }
         
@@ -270,11 +303,16 @@ export class NPC {
         
         const retrieveSpeed = this.facing * MAX_VEL_X * 0.8;
         
-        // Apply movement using physics system with correct air state
-        if (this.physics) {
-          this.physics.applyHorizontalMovement(this, retrieveSpeed, dt, inAir);
+        // Validate retrieveSpeed
+        if (isNaN(retrieveSpeed) || !isFinite(retrieveSpeed)) {
+          this.physics?.applyHorizontalMovement(this, 0, dt, inAir);
         } else {
-          this.vx = retrieveSpeed;
+          // Apply movement using physics system with correct air state
+          if (this.physics) {
+            this.physics.applyHorizontalMovement(this, retrieveSpeed, dt, inAir);
+          } else {
+            this.vx = retrieveSpeed;
+          }
         }
         
         // Jump if needed to reach arrow
@@ -288,21 +326,25 @@ export class NPC {
         const arrowDy = this.y - this.targetY;
         const arrowDistSq = arrowDx * arrowDx + arrowDy * arrowDy;
         if (arrowDistSq < 576) {
-          // Pickup arrow
-          if (this.arrows < this.maxArrows) {
-            this.arrows++;
-            // Arrow will be removed by caller
+            // Pickup arrow
+            if (this.arrows < this.maxArrows) {
+              this.arrows++;
+              // Arrow will be removed by caller
+            }
+            this.state = NPC_STATE.PATROL;
+            this.stateTimer = 0;
+            // Reset patrol direction when returning to patrol
+            this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
           }
-          this.state = NPC_STATE.PATROL;
-          this.stateTimer = 0;
-        }
-        
-        // Timeout retrieval
-        if (this.stateTimer > 5.0) {
-          this.state = NPC_STATE.PATROL;
-          this.stateTimer = 0;
-        }
-        break;
+          
+          // Timeout retrieval
+          if (this.stateTimer > 5.0) {
+            this.state = NPC_STATE.PATROL;
+            this.stateTimer = 0;
+            // Reset patrol direction when returning to patrol
+            this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
+          }
+          break;
       }
       
       return newArrow;
@@ -337,7 +379,9 @@ export class NPC {
     this.jumpBuffer = 0;
     this.state = NPC_STATE.PATROL;
     this.stateTimer = 0;
-    this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
+    // Reset patrol direction independently - alternate based on ID to ensure variety
+    this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
+    this.facing = this.patrolDirection;
     this.setWave(wave);
   }
 
