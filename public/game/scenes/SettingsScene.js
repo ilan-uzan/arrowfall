@@ -158,11 +158,18 @@ export class SettingsScene {
       ctx.fillText('• Press A/Cross to join as Player 2+', 20, y);
     } else {
       ctx.font = '11px monospace';
-      this.connectedGamepads.forEach((pad, index) => {
-        const binding = Object.values(this.game.inputRouter.playerBindings)
-          .find(b => b.type === 'gamepad' && b.id === pad.index);
-        const playerId = binding ? Object.keys(this.game.inputRouter.playerBindings)
-          .find(id => this.game.inputRouter.playerBindings[id] === binding) : null;
+      // Optimized loop for controller display
+      for (let index = 0; index < this.connectedGamepads.length; index++) {
+        const pad = this.connectedGamepads[index];
+        let playerId = null;
+        
+        // Find binding more efficiently
+        for (const [pid, binding] of Object.entries(this.game.inputRouter.playerBindings)) {
+          if (binding.type === 'gamepad' && binding.id === pad.index) {
+            playerId = pid;
+            break;
+          }
+        }
         
         ctx.fillStyle = PALETTE.ink;
         // Shorten controller name if too long
@@ -178,7 +185,7 @@ export class SettingsScene {
           ctx.fillText(`→ Not assigned`, 180, y);
         }
         y += 18;
-      });
+      }
       
           y += 10;
           ctx.fillStyle = PALETTE.sub;
@@ -207,15 +214,16 @@ export class SettingsScene {
     ctx.font = '11px monospace';
     const gamepadControls = [
       'Left Stick:  Move',
-      'A / Cross ×: Jump',
-      'X / Square ☐: Shoot',
-      'R2 / RT:     Shoot (Alt)',
-      'Start/Options: Pause / Join'
+      'Cross ×:     Jump',
+      'Square ☐:   Shoot',
+      'R2:          Shoot (Alt)',
+      'Options:     Pause / Join'
     ];
-    gamepadControls.forEach(control => {
-      ctx.fillText(control, 30, y);
+    // Optimized loop
+    for (let i = 0; i < gamepadControls.length; i++) {
+      ctx.fillText(gamepadControls[i], 30, y);
       y += 15;
-    });
+    }
 
     y += 12;
     ctx.fillStyle = PALETTE.sub;

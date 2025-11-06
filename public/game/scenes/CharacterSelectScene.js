@@ -58,7 +58,15 @@ export class CharacterSelectScene {
   }
 
   handleInput(actions, playerId) {
-    const player = this.players.find(p => p.id === playerId);
+      // Find player efficiently (optimized)
+      let player = null;
+      for (const p of this.players) {
+        if (p.id === playerId) {
+          player = p;
+          break;
+        }
+      }
+      if (!player) return;
     if (!player) return;
 
     if (actions.jumpPressed) {
@@ -128,7 +136,14 @@ export class CharacterSelectScene {
     for (let i = 0; i < this.maxPlayers; i++) {
       const x = i * slotWidth;
       const y = startY;
-      const player = this.players.find(p => p.id === i + 1);
+      // Find player efficiently (avoid repeated find calls)
+      let player = null;
+      for (const p of this.players) {
+        if (p.id === i + 1) {
+          player = p;
+          break;
+        }
+      }
       
       // Slot background
       ctx.fillStyle = player ? PALETTE.bg1 : PALETTE.bg0;

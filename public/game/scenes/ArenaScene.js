@@ -311,11 +311,18 @@ export class ArenaScene {
     }
   }
 
-  handleInput(actions, playerId) {
-    if (this.state !== 'playing') return;
-    
-    const player = this.players.find(p => p.id === playerId);
-    if (!player || player.dead) return;
+      handleInput(actions, playerId) {
+        if (this.state !== 'playing') return;
+        
+        // Find player efficiently
+        let player = null;
+        for (const p of this.players) {
+          if (p.id === playerId) {
+            player = p;
+            break;
+          }
+        }
+        if (!player || player.dead) return;
 
     // Shooting handled in player.update()
     // Pause handled globally (Options/Start pauses game)

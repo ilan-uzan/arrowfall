@@ -117,8 +117,9 @@ export class ResultsScene {
     ctx.fillStyle = PALETTE.bg0;
     ctx.fillRect(0, 0, w, h);
 
-    // Render particles
-    this.particles.forEach(particle => {
+    // Render particles (optimized loop)
+    for (let i = 0; i < this.particles.length; i++) {
+      const particle = this.particles[i];
       const alpha = particle.life / particle.maxLife;
       ctx.save();
       ctx.translate(particle.x, particle.y);
@@ -128,7 +129,7 @@ export class ResultsScene {
       ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
       ctx.restore();
       ctx.globalAlpha = 1.0;
-    });
+    }
 
     // Winner banner
     if (this.winner) {
