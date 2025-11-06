@@ -450,15 +450,15 @@ export class SurvivalScene {
     ctx.fillStyle = this.npcs.length > 0 ? PALETTE.accent2 : PALETTE.accent;
     ctx.fillText(`${this.npcs.length} NPCs`, w / 2, 18);
 
-        // Controls hint (bottom) - only show occasionally to reduce rendering
-        if (this.state === 'playing' && this.player && !this.player.dead && this.waveTimer % 5 < 2) {
-          ctx.fillStyle = PALETTE.sub;
-          ctx.font = '9px monospace';
-          ctx.textAlign = 'center';
-          ctx.globalAlpha = 0.6;
-          ctx.fillText('Left Stick: Move | Cross: Jump | Square: Shoot', w / 2, h - 10);
-          ctx.globalAlpha = 1.0;
-        }
+    // Controls hint (bottom) - only show occasionally to reduce rendering
+    if (this.state === 'playing' && this.player && !this.player.dead && this.waveTimer % 5 < 2) {
+      ctx.fillStyle = PALETTE.sub;
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.6;
+      ctx.fillText('Left Stick: Move | Cross: Jump | Square: Shoot', w / 2, h - 10);
+      ctx.globalAlpha = 1.0;
+    }
   }
 }
 
