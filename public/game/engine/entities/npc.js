@@ -213,10 +213,18 @@ export class NPC {
 
       case NPC_STATE.EVADE:
         // Jump away from player
-        this.vx = this.patrolDirection * MAX_VEL_X;
+        const evadeSpeed = this.patrolDirection * MAX_VEL_X * 0.8;
+        
+        // Apply movement using physics system
+        if (this.physics) {
+          this.physics.applyHorizontalMovement(this, evadeSpeed, dt, !this.onGround);
+        } else {
+          this.vx = evadeSpeed;
+        }
+        
         this.facing = this.patrolDirection;
         
-        // Jump if on ground
+        // Jump if on ground and just started evading
         if (this.onGround && this.stateTimer < 0.1) {
           this.vy = -380; // Jump velocity
         }
