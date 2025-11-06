@@ -7,6 +7,7 @@ export class TitleScene {
     this.selectedButton = 0;
     this.buttons = ['Play', 'How to Play', 'Quit'];
     this.animationTime = 0;
+    this.lastNavTime = 0; // Track navigation timing
   }
 
   enter() {
