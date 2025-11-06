@@ -99,9 +99,10 @@ export class ResultsScene {
       ctx.font = '12px monospace';
       ctx.fillText(`Wave ${this.game.matchWave || 0}`, w / 2, 70);
       
-      // Save survival run to database
-      if (this.game.matchWave) {
+      // Save survival run to database (only once)
+      if (this.game.matchWave && !this.scoreSaved) {
         this.saveSurvivalRun(this.game.matchWave);
+        this.scoreSaved = true;
       }
     }
 
