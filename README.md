@@ -4,6 +4,14 @@
 
 ---
 
+## 🎮 Play Now
+
+**🌐 Live Demo**: [arrowfall.netlify.app](https://arrowfall.netlify.app)
+
+**⚠️ Controller Required**: This game is **controller-only** - you must connect a PS5 or Xbox controller to play. Keyboard input is not supported.
+
+---
+
 ## 🎮 Game Overview
 
 **Arrowfall** is a fast-paced local multiplayer archer brawler inspired by TowerFall Ascension. Built entirely for browser play with game controller support, it features tight platforming mechanics, strategic arrow combat, and a unique toroidal (wrapping) arena system.
@@ -223,6 +231,12 @@ arrowfall/
 ---
 
 ## 🚀 Quick Start
+
+### Play Online
+**🌐 Live Demo**: [arrowfall.netlify.app](https://arrowfall.netlify.app)  
+**⚠️ Controller Required**: Connect a PS5 or Xbox controller to play. Keyboard input is not supported.
+
+### Run Locally
 
 ```bash
 # Install dependencies
