@@ -85,6 +85,8 @@ export class TitleScene {
   }
 
   render(ctx) {
+    if (!this.game || !this.game.view) return;
+    
     const { w, h } = this.game.view;
     
     // Background
@@ -99,7 +101,7 @@ export class TitleScene {
     ctx.fillText('ARROWFALL', w / 2, h / 3 - 20);
 
     // Check controller status (cache to avoid repeated calculations)
-    const connectedCount = this.game.inputRouter.gamepads.length;
+    const connectedCount = this.game.inputRouter?.gamepads?.length || 0;
     
     // Subtitle with controller count
     ctx.fillStyle = connectedCount > 0 ? PALETTE.accent : PALETTE.accent2;

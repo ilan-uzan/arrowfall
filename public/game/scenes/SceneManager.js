@@ -58,7 +58,26 @@ export class SceneManager {
 
   render(ctx) {
     if (this.scenes[this.currentScene]?.render) {
-      this.scenes[this.currentScene].render(ctx);
+      try {
+        this.scenes[this.currentScene].render(ctx);
+      } catch (error) {
+        console.error('Error rendering scene:', error);
+        // Fallback: draw a simple background
+        ctx.fillStyle = '#0d0f1a';
+        ctx.fillRect(0, 0, this.game.view.w, this.game.view.h);
+        ctx.fillStyle = '#7df9ff';
+        ctx.font = '16px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('Rendering Error', this.game.view.w / 2, this.game.view.h / 2);
+      }
+    } else {
+      // No scene loaded - draw fallback
+      ctx.fillStyle = '#0d0f1a';
+      ctx.fillRect(0, 0, this.game.view.w, this.game.view.h);
+      ctx.fillStyle = '#7df9ff';
+      ctx.font = '16px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('Scene not loaded', this.game.view.w / 2, this.game.view.h / 2);
     }
   }
 

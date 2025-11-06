@@ -124,28 +124,40 @@ export class GameEngine {
   }
 
   render() {
-    const { w, h } = this.view;
+    try {
+      const { w, h } = this.view;
 
-    // Clear canvas
-    this.ctx.fillStyle = PALETTE.bg0;
-    this.ctx.fillRect(0, 0, w, h);
-
-    // Apply screen shake
-    this.ctx.save();
-    this.ctx.translate(this.screenShake.x, this.screenShake.y);
-
-    // Render current scene
-    this.sceneManager.render(this.ctx);
-
-    // Apply hit flash overlay
-    if (this.hitFlash > 0) {
-      this.ctx.fillStyle = PALETTE.accent2;
-      this.ctx.globalAlpha = Math.min(this.hitFlash * 5, 0.15);
+      // Clear canvas
+      this.ctx.fillStyle = PALETTE.bg0;
       this.ctx.fillRect(0, 0, w, h);
-      this.ctx.globalAlpha = 1.0;
-    }
 
-    this.ctx.restore();
+      // Apply screen shake
+      this.ctx.save();
+      this.ctx.translate(this.screenShake.x, this.screenShake.y);
+
+      // Render current scene
+      if (this.sceneManager) {
+        this.sceneManager.render(this.ctx);
+      } else {
+        // Fallback if scene manager not initialized
+        this.ctx.fillStyle = '#7df9ff';
+        this.ctx.font = '16px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('Initializing...', w / 2, h / 2);
+      }
+
+      // Apply hit flash overlay
+      if (this.hitFlash > 0) {
+        this.ctx.fillStyle = PALETTE.accent2;
+        this.ctx.globalAlpha = Math.min(this.hitFlash * 5, 0.15);
+        this.ctx.fillRect(0, 0, w, h);
+        this.ctx.globalAlpha = 1.0;
+      }
+
+      this.ctx.restore();
+    } catch (error) {
+      console.error('Render error:', error);
+    }
   }
 
   triggerScreenShake(intensity = 6, duration = 0.12) {
@@ -166,6 +178,13 @@ export class GameEngine {
 
 // Start game when DOM is ready
 window.addEventListener('DOMContentLoaded', () => {
-  window.game = new GameEngine();
+  try {
+    window.game = new GameEngine();
+    if (!window.game || !window.game.canvas) {
+      console.error('Game engine failed to initialize');
+    }
+  } catch (error) {
+    console.error('Error initializing game:', error);
+  }
 });
 
