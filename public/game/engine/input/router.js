@@ -78,8 +78,13 @@ export class InputRouter {
       }
 
       // Get analog stick with safe access
-      const leftStickX = (pad.axes[0] !== undefined) ? pad.axes[0] : 0;
-      const leftStickY = (pad.axes[1] !== undefined) ? pad.axes[1] : 0;
+      // Clamp to valid range [-1, 1] to prevent NaN or extreme values
+      let leftStickX = (pad.axes[0] !== undefined) ? pad.axes[0] : 0;
+      let leftStickY = (pad.axes[1] !== undefined) ? pad.axes[1] : 0;
+      
+      // Clamp to valid range and handle NaN/Infinity
+      leftStickX = isNaN(leftStickX) || !isFinite(leftStickX) ? 0 : Math.max(-1, Math.min(1, leftStickX));
+      leftStickY = isNaN(leftStickY) || !isFinite(leftStickY) ? 0 : Math.max(-1, Math.min(1, leftStickY));
       
       // D-Pad mapping (for menu navigation)
       let dPadX = 0;
@@ -166,10 +171,11 @@ export class InputRouter {
       
       // Only set left/right if axisX is significant (above deadzone threshold)
       // This prevents false positives from small axis values
-      const left = axisX < -0.15;
-      const right = axisX > 0.15;
-      const up = axisY < -0.15;
-      const down = axisY > 0.15;
+      // Use strict threshold to prevent drift
+      const left = axisX < -0.2;
+      const right = axisX > 0.2;
+      const up = axisY < -0.2;
+      const down = axisY > 0.2;
       
       return {
         left: left,

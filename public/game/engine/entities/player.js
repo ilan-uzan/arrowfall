@@ -48,25 +48,24 @@ export class Player {
       // Horizontal movement - use axisX proportionally for smooth control
       let targetVx = 0;
       
+      // Priority: axisX > boolean left/right
       // Only use axisX if it's significant (above deadzone threshold)
       if (actions.axisX !== undefined && Math.abs(actions.axisX) > 0.15) {
         // Use axisX value proportionally (0 to 1) scaled to MAX_VEL_X
         // This gives smooth, proportional control instead of instant full speed
         targetVx = actions.axisX * MAX_VEL_X;
         this.facing = actions.axisX > 0 ? 1 : -1;
-      } else if (actions.left && !actions.right) {
-        // Only use boolean left if axisX is not significant
+      } else {
+        // Only use boolean left/right if axisX is not significant or undefined
         // This prevents conflicts between axisX and boolean left/right
-        if (!actions.axisX || Math.abs(actions.axisX) <= 0.15) {
+        if (actions.left && !actions.right) {
           targetVx = -MAX_VEL_X;
           this.facing = -1;
-        }
-      } else if (actions.right && !actions.left) {
-        // Only use boolean right if axisX is not significant
-        if (!actions.axisX || Math.abs(actions.axisX) <= 0.15) {
+        } else if (actions.right && !actions.left) {
           targetVx = MAX_VEL_X;
           this.facing = 1;
         }
+        // If neither left nor right, targetVx stays 0
       }
 
       // Apply movement BEFORE physics update (uses previous frame's ground state)
