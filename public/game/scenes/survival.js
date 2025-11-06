@@ -200,10 +200,7 @@ export class SurvivalScene {
       for (let i = arrowsToRemove.length - 1; i >= 0; i--) {
         this.arrows.splice(arrowsToRemove[i], 1);
       }
-    } catch (error) {
-      console.error('Critical error in survival update:', error);
-    }
-    
+      
       // Check wave completion
       const aliveNPCs = this.npcs.filter(n => n && !n.dead);
       if (aliveNPCs.length === 0 && this.npcs.length > 0) {
