@@ -162,9 +162,22 @@ export class PhysicsSystem {
       entity.jumpBuffer -= FIXED_DT; // Fixed timestep
     }
 
-    // Execute jump
-    if (entity.jumpBuffer > 0 && (entity.onGround || entity.coyoteTime > 0)) {
+    // Execute jump - can jump from ground, coyote time, or wall
+    const canJump = entity.onGround || entity.coyoteTime > 0 || 
+                    (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right));
+    
+    if (entity.jumpBuffer > 0 && canJump) {
       entity.vy = JUMP_VEL;
+      
+      // Wall-jump: push away from wall
+      if (!entity.onGround && entity.coyoteTime <= 0 && entity.touchingWall) {
+        if (entity.touchingWall.left) {
+          entity.vx = MAX_VEL_X * 0.8; // Push right
+        } else if (entity.touchingWall.right) {
+          entity.vx = -MAX_VEL_X * 0.8; // Push left
+        }
+      }
+      
       entity.jumpBuffer = 0;
       entity.coyoteTime = 0;
       return true;
