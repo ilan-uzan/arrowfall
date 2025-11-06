@@ -2,6 +2,10 @@
 ## Hackathon Presentation - Developers Institute
 ### By Ilan Uzan
 
+<div align="center">
+  <img src="arrowfall_icon.png" alt="Arrowfall Icon" width="200" />
+</div>
+
 ---
 
 ## 🎮 Play Now
