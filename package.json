@@ -1,23 +1,24 @@
 {
   "name": "arrowfall",
-  "version": "1.0.0",
-  "description": "A fast-paced local multiplayer archer brawler inspired by TowerFall",
-  "main": "server/index.js",
+  "version": "2.0.0",
+  "description": "A fast-paced local multiplayer archer brawler - TowerFall-style",
+  "type": "module",
   "scripts": {
-    "start": "node server/index.js",
-    "dev": "nodemon server/index.js"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
   },
-  "keywords": ["game", "hackathon", "canvas", "multiplayer"],
+  "keywords": ["game", "canvas", "local-multiplayer", "controller"],
   "author": "ilan-uzan",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "ejs": "^3.1.9",
-    "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^16.3.1"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "@types/node": "^20.10.6",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vitest": "^1.1.0"
   }
 }
-
