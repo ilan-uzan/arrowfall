@@ -16,39 +16,56 @@ export class Arrow {
   }
 
   update(dt, world) {
-    if (!this.active || this.embedded) return;
+    if (!this.active || this.embedded || !world) return;
 
-    // Apply gravity
-    const arrowGravity = 280;
-    this.vy += arrowGravity * dt;
-
-    // Update position
-    const oldX = this.x;
-    const oldY = this.y;
-    this.x += this.vx * dt;
-    this.y += this.vy * dt;
-
-    // Add to trail
-    this.trail.push({ x: oldX, y: oldY });
-    if (this.trail.length > 3) {
-      this.trail.shift();
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60;
     }
 
-    // Check collision with world
-    if (world.checkCollision(this.x, this.y, this.width, this.height)) {
-      // Embed in wall/floor
-      this.embedded = true;
-      this.vx = 0;
-      this.vy = 0;
-      // Snap to grid
-      this.x = Math.floor(this.x / world.tileSize) * world.tileSize;
-      this.y = Math.floor(this.y / world.tileSize) * world.tileSize;
-    }
+    try {
+      // Apply gravity
+      const arrowGravity = 280;
+      this.vy += arrowGravity * dt;
 
-    // Check bounds
-    const worldWidth = world.width * world.tileSize;
-    const worldHeight = world.height * world.tileSize;
-    if (this.x < 0 || this.x > worldWidth || this.y < 0 || this.y > worldHeight) {
+      // Update position
+      const oldX = this.x;
+      const oldY = this.y;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+
+      // Add to trail
+      if (!this.trail) {
+        this.trail = [];
+      }
+      this.trail.push({ x: oldX, y: oldY });
+      if (this.trail.length > 3) {
+        this.trail.shift();
+      }
+
+      // Check collision with world
+      if (world.checkCollision && world.checkCollision(this.x, this.y, this.width, this.height)) {
+        // Embed in wall/floor
+        this.embedded = true;
+        this.vx = 0;
+        this.vy = 0;
+        // Snap to grid
+        if (world.tileSize) {
+          this.x = Math.floor(this.x / world.tileSize) * world.tileSize;
+          this.y = Math.floor(this.y / world.tileSize) * world.tileSize;
+        }
+      }
+
+      // Check bounds
+      if (world.width && world.tileSize) {
+        const worldWidth = world.width * world.tileSize;
+        const worldHeight = world.height * world.tileSize;
+        if (this.x < 0 || this.x > worldWidth || this.y < 0 || this.y > worldHeight) {
+          this.active = false;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating arrow:', error);
       this.active = false;
     }
   }

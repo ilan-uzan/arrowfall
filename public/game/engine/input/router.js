@@ -59,37 +59,58 @@ export class InputRouter {
   }
 
   getGamepadActions(gamepadIndex) {
-    const pad = this.gamepadManager.getGamepad(gamepadIndex);
-    if (!pad || !pad.connected) return null;
+    try {
+      const pad = this.gamepadManager.getGamepad(gamepadIndex);
+      if (!pad || !pad.connected) {
+        // Gamepad disconnected - unbind player
+        for (const [playerId, boundIndex] of this.playerBindings.entries()) {
+          if (boundIndex === gamepadIndex) {
+            this.unbindPlayer(playerId);
+            break;
+          }
+        }
+        return null;
+      }
 
-    // Get analog stick
-    const leftStickX = pad.axes[0] || 0;
-    const leftStickY = pad.axes[1] || 0;
-    
-    // D-Pad mapping (for menu navigation)
-    let dPadX = 0;
-    let dPadY = 0;
-    
-    // Check if D-Pad buttons exist (some gamepads have them as buttons, some as axes)
-    if (pad.buttons && pad.buttons.length > 15) {
-      if (pad.buttons[DPAD.RIGHT]?.pressed) dPadX = 1;
-      else if (pad.buttons[DPAD.LEFT]?.pressed) dPadX = -1;
-      if (pad.buttons[DPAD.DOWN]?.pressed) dPadY = 1;
-      else if (pad.buttons[DPAD.UP]?.pressed) dPadY = -1;
-    }
-    
-    // Use D-Pad if stick is not active (for menu navigation)
-    const moveX = Math.abs(leftStickX) > DEADZONE ? leftStickX : dPadX;
-    const moveY = Math.abs(leftStickY) > DEADZONE ? leftStickY : dPadY;
-    
-    // Normalize axis
-    const axisX = Math.abs(moveX) < DEADZONE ? 0 : moveX;
-    const axisY = Math.abs(moveY) < DEADZONE ? 0 : moveY;
-    
-    // Button states
-    const button0Pressed = pad.buttons[GAMEPAD_BUTTONS.JUMP]?.pressed || false;
-    const button2Pressed = pad.buttons[GAMEPAD_BUTTONS.SHOOT]?.pressed || false;
-    const button9Pressed = pad.buttons[GAMEPAD_BUTTONS.PAUSE]?.pressed || false;
+      // Validate axes array exists
+      if (!pad.axes || !Array.isArray(pad.axes)) {
+        return null;
+      }
+
+      // Get analog stick with safe access
+      const leftStickX = (pad.axes[0] !== undefined) ? pad.axes[0] : 0;
+      const leftStickY = (pad.axes[1] !== undefined) ? pad.axes[1] : 0;
+      
+      // D-Pad mapping (for menu navigation)
+      let dPadX = 0;
+      let dPadY = 0;
+      
+      // Check if D-Pad buttons exist (some gamepads have them as buttons, some as axes)
+      if (pad.buttons && Array.isArray(pad.buttons) && pad.buttons.length > 15) {
+        const dpadRight = pad.buttons[DPAD.RIGHT];
+        const dpadLeft = pad.buttons[DPAD.LEFT];
+        const dpadDown = pad.buttons[DPAD.DOWN];
+        const dpadUp = pad.buttons[DPAD.UP];
+        
+        if (dpadRight?.pressed) dPadX = 1;
+        else if (dpadLeft?.pressed) dPadX = -1;
+        if (dpadDown?.pressed) dPadY = 1;
+        else if (dpadUp?.pressed) dPadY = -1;
+      }
+      
+      // Use D-Pad if stick is not active (for menu navigation)
+      const moveX = Math.abs(leftStickX) > DEADZONE ? leftStickX : dPadX;
+      const moveY = Math.abs(leftStickY) > DEADZONE ? leftStickY : dPadY;
+      
+      // Normalize axis
+      const axisX = Math.abs(moveX) < DEADZONE ? 0 : moveX;
+      const axisY = Math.abs(moveY) < DEADZONE ? 0 : moveY;
+      
+      // Button states with safe access
+      const buttons = pad.buttons || [];
+      const button0Pressed = (buttons[GAMEPAD_BUTTONS.JUMP]?.pressed) || false;
+      const button2Pressed = (buttons[GAMEPAD_BUTTONS.SHOOT]?.pressed) || false;
+      const button9Pressed = (buttons[GAMEPAD_BUTTONS.PAUSE]?.pressed) || false;
     
     // Track button states for single-frame detection
     const key = `pad${gamepadIndex}`;
@@ -100,38 +121,42 @@ export class InputRouter {
     const shootPressed = button2Pressed && !lastState[GAMEPAD_BUTTONS.SHOOT];
     const pausePressed = button9Pressed && !lastState[GAMEPAD_BUTTONS.PAUSE];
     
-    // Track axis states for single-frame navigation detection
-    const lastAxisX = lastState.axisX || 0;
-    const lastAxisY = lastState.axisY || 0;
-    const leftPressed = axisX < -DEADZONE && lastAxisX >= -DEADZONE;
-    const rightPressed = axisX > DEADZONE && lastAxisX <= DEADZONE;
-    const upPressed = axisY < -DEADZONE && lastAxisY >= -DEADZONE;
-    const downPressed = axisY > DEADZONE && lastAxisY <= DEADZONE;
-    
-    // Update last button states
-    this.lastButtonStates.set(key, {
-      [GAMEPAD_BUTTONS.JUMP]: button0Pressed,
-      [GAMEPAD_BUTTONS.SHOOT]: button2Pressed,
-      [GAMEPAD_BUTTONS.PAUSE]: button9Pressed,
-      axisX: axisX,
-      axisY: axisY
-    });
-    
-    return {
-      left: axisX < -DEADZONE,
-      right: axisX > DEADZONE,
-      up: axisY < -DEADZONE,
-      down: axisY > DEADZONE,
-      leftPressed: leftPressed,
-      rightPressed: rightPressed,
-      upPressed: upPressed,
-      downPressed: downPressed,
-      jump: jumpPressed,
-      shoot: shootPressed,
-      pause: pausePressed,
-      axisX: axisX,
-      axisY: axisY
-    };
+      // Track axis states for single-frame navigation detection
+      const lastAxisX = lastState.axisX || 0;
+      const lastAxisY = lastState.axisY || 0;
+      const leftPressed = axisX < -DEADZONE && lastAxisX >= -DEADZONE;
+      const rightPressed = axisX > DEADZONE && lastAxisX <= DEADZONE;
+      const upPressed = axisY < -DEADZONE && lastAxisY >= -DEADZONE;
+      const downPressed = axisY > DEADZONE && lastAxisY <= DEADZONE;
+      
+      // Update last button states
+      this.lastButtonStates.set(key, {
+        [GAMEPAD_BUTTONS.JUMP]: button0Pressed,
+        [GAMEPAD_BUTTONS.SHOOT]: button2Pressed,
+        [GAMEPAD_BUTTONS.PAUSE]: button9Pressed,
+        axisX: axisX,
+        axisY: axisY
+      });
+      
+      return {
+        left: axisX < -DEADZONE,
+        right: axisX > DEADZONE,
+        up: axisY < -DEADZONE,
+        down: axisY > DEADZONE,
+        leftPressed: leftPressed,
+        rightPressed: rightPressed,
+        upPressed: upPressed,
+        downPressed: downPressed,
+        jump: jumpPressed,
+        shoot: shootPressed,
+        pause: pausePressed,
+        axisX: axisX,
+        axisY: axisY
+      };
+    } catch (error) {
+      console.error('Error getting gamepad actions:', error);
+      return null;
+    }
   }
 
   getConnectedCount() {

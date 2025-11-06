@@ -54,25 +54,40 @@ export class NPC {
   }
 
   update(dt, world, player, arrows) {
-    if (this.dead || !player || player.dead) return null;
+    if (this.dead || !player || player.dead || !world || !this.physics) {
+      return null;
+    }
 
-    // Update physics
-    this.physics.updateEntity(this, dt);
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60;
+    }
 
-    // Update AI behavior
-    const newArrow = this.updateBehavior(dt, world, player, arrows);
-    
-    return newArrow;
+    try {
+      // Update physics
+      this.physics.updateEntity(this, dt);
+
+      // Update AI behavior
+      const newArrow = this.updateBehavior(dt, world, player, arrows || []);
+      
+      return newArrow;
+    } catch (error) {
+      console.error(`Error updating NPC ${this.id}:`, error);
+      return null;
+    }
   }
 
   updateBehavior(dt, world, player, arrows) {
-    this.stateTimer += dt;
-    this.lastShootTime += dt;
+    if (!player || !world) return null;
+    
+    try {
+      this.stateTimer += dt;
+      this.lastShootTime += dt;
 
-    const dx = player.x - this.x;
-    const dy = player.y - this.y;
-    const distSq = dx * dx + dy * dy;
-    const dist = Math.sqrt(distSq);
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const distSq = dx * dx + dy * dy;
+      const dist = Math.sqrt(distSq);
 
     // Evade if player is too close (80^2 = 6400)
     if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {
@@ -226,9 +241,13 @@ export class NPC {
           this.stateTimer = 0;
         }
         break;
+      }
+      
+      return newArrow;
+    } catch (error) {
+      console.error(`Error in NPC behavior update:`, error);
+      return null;
     }
-    
-    return newArrow;
   }
 
   pickupArrow() {

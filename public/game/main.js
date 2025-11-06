@@ -140,23 +140,51 @@ class Game {
   }
 
   update(dt) {
-    // Update input
-    this.inputRouter.update();
-    
-    // Update FX
-    this.fx.update(dt);
-    
-    // Update current scene
-    if (this.currentScene && this.currentScene.update) {
-      this.currentScene.update(dt);
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60; // Default to 60 FPS if invalid
     }
-    
-    // Handle input for all bound players
-    for (let i = 1; i <= 4; i++) {
-      const actions = this.inputRouter.getActions(i);
-      if (actions && this.currentScene && this.currentScene.handleInput) {
-        this.currentScene.handleInput(actions, i);
+
+    try {
+      // Update input
+      if (this.inputRouter) {
+        this.inputRouter.update();
       }
+      
+      // Update FX
+      if (this.fx) {
+        this.fx.update(dt);
+      }
+      
+      // Update current scene with error handling
+      if (this.currentScene && this.currentScene.update) {
+        try {
+          this.currentScene.update(dt);
+        } catch (error) {
+          console.error('Error updating scene:', error);
+          // Fallback to title scene on critical error
+          if (this.currentScene !== this.scenes.title) {
+            console.warn('Falling back to title scene due to error');
+            this.setScene('title');
+          }
+        }
+      }
+      
+      // Handle input for all bound players
+      if (this.currentScene && this.currentScene.handleInput) {
+        for (let i = 1; i <= 4; i++) {
+          try {
+            const actions = this.inputRouter.getActions(i);
+            if (actions) {
+              this.currentScene.handleInput(actions, i);
+            }
+          } catch (error) {
+            console.error(`Error handling input for player ${i}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Critical error in game update:', error);
     }
   }
 

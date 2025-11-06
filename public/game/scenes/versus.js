@@ -18,40 +18,52 @@ export class VersusScene {
   }
 
   enter() {
-    // Get players from lobby or create default
-    if (this.game.matchPlayers && this.game.matchPlayers.length >= 2) {
-      this.players = this.game.matchPlayers.map(p => {
-        const spawn = this.game.world.spawns[`p${p.id}`];
-        const newPlayer = new Player(spawn.x, spawn.y, p.id, p.color, this.game.physics);
-        newPlayer.wins = 0;
-        return newPlayer;
+    try {
+      // Validate world and spawns exist
+      if (!this.game.world || !this.game.world.spawns) {
+        console.error('World or spawns missing in versus scene!');
+        return;
+      }
+      
+      // Get players from lobby or create default
+      if (this.game.matchPlayers && this.game.matchPlayers.length >= 2) {
+        this.players = this.game.matchPlayers.map(p => {
+          const spawn = this.game.world.spawns[`p${p.id}`] || { x: 32, y: 128 };
+          const newPlayer = new Player(spawn.x, spawn.y, p.id, p.color, this.game.physics);
+          newPlayer.wins = 0;
+          return newPlayer;
+        });
+      } else {
+        // Fallback: create 2 default players
+        const spawn1 = this.game.world.spawns.p1 || { x: 32, y: 128 };
+        const spawn2 = this.game.world.spawns.p2 || { x: 288, y: 128 };
+        this.players = [
+          new Player(spawn1.x, spawn1.y, 1, PALETTE.player1, this.game.physics),
+          new Player(spawn2.x, spawn2.y, 2, PALETTE.player2, this.game.physics)
+        ];
+        // Bind first two gamepads
+        this.game.inputRouter.update();
+        const gamepads = this.game.inputRouter.getAllGamepads();
+        if (gamepads.length >= 1) this.game.inputRouter.bindGamepad(1, gamepads[0].index);
+        if (gamepads.length >= 2) this.game.inputRouter.bindGamepad(2, gamepads[1].index);
+      }
+      
+      // Initialize scores
+      this.players.forEach(p => {
+        if (p && p.id) {
+          this.scores[p.id] = 0;
+        }
       });
-    } else {
-      // Fallback: create 2 default players
-      const spawn1 = this.game.world.spawns.p1;
-      const spawn2 = this.game.world.spawns.p2;
-      this.players = [
-        new Player(spawn1.x, spawn1.y, 1, PALETTE.player1, this.game.physics),
-        new Player(spawn2.x, spawn2.y, 2, PALETTE.player2, this.game.physics)
-      ];
-      // Bind first two gamepads
-      this.game.inputRouter.update();
-      const gamepads = this.game.inputRouter.getAllGamepads();
-      if (gamepads.length >= 1) this.game.inputRouter.bindGamepad(1, gamepads[0].index);
-      if (gamepads.length >= 2) this.game.inputRouter.bindGamepad(2, gamepads[1].index);
+      
+      this.arrows = [];
+      this.round = 1;
+      this.roundActive = false;
+      this.countdown = 3.0;
+      this.countdownText = '3';
+      console.log('Versus scene entered');
+    } catch (error) {
+      console.error('Error entering versus scene:', error);
     }
-    
-    // Initialize scores
-    this.players.forEach(p => {
-      this.scores[p.id] = 0;
-    });
-    
-    this.arrows = [];
-    this.round = 1;
-    this.roundActive = false;
-    this.countdown = 3.0;
-    this.countdownText = '3';
-    console.log('Versus scene entered');
   }
 
   update(dt) {
@@ -76,49 +88,89 @@ export class VersusScene {
     
     if (!this.roundActive) return;
     
-    // Update all players
+    // Update all players with error handling
     for (const player of this.players) {
-      if (player.dead) continue;
+      if (!player || player.dead) continue;
       
-      const actions = this.game.inputRouter.getActions(player.id);
-      const newArrow = player.update(dt, this.game.world, actions);
-      if (newArrow) {
-        this.arrows.push(newArrow);
+      try {
+        const actions = this.game.inputRouter.getActions(player.id);
+        // Only update if actions exist (gamepad connected)
+        if (actions) {
+          const newArrow = player.update(dt, this.game.world, actions);
+          if (newArrow) {
+            this.arrows.push(newArrow);
+          }
+        } else {
+          // Gamepad disconnected - mark player as dead after a short delay
+          // This prevents instant death on temporary disconnects
+        }
+      } catch (error) {
+        console.error(`Error updating player ${player.id}:`, error);
       }
     }
     
-    // Update arrows
-    for (let i = this.arrows.length - 1; i >= 0; i--) {
+    // Update arrows with safe iteration
+    const arrowsToRemove = [];
+    for (let i = 0; i < this.arrows.length; i++) {
       const arrow = this.arrows[i];
-      arrow.update(dt, this.game.world);
-      
-      // Check arrow collisions with players
-      for (const player of this.players) {
-        if (player.dead || arrow.ownerId === player.id) continue;
-        if (this.collisions.checkArrowPlayer(arrow, player)) {
-          player.die();
-          this.game.fx.createDeathParticles(player.x, player.y, player.color);
-          this.game.fx.triggerScreenShake(4, 0.1);
-          arrow.remove();
-        }
+      if (!arrow || !arrow.active) {
+        arrowsToRemove.push(i);
+        continue;
       }
       
-      // Check arrow pickup
-      if (arrow.embedded) {
-        for (const player of this.players) {
-          if (player.dead) continue;
-          if (this.collisions.checkArrowPickup(player, arrow, 16)) {
-            if (player.pickupArrow()) {
-              arrow.remove();
+      try {
+        arrow.update(dt, this.game.world);
+        
+        // Check arrow collisions with players (only if arrow is flying)
+        if (!arrow.embedded) {
+          for (const player of this.players) {
+            if (!player || player.dead || arrow.ownerId === player.id) continue;
+            try {
+              if (this.collisions.checkArrowPlayer(arrow, player)) {
+                player.die();
+                this.game.fx.createDeathParticles(player.x, player.y, player.color);
+                this.game.fx.triggerScreenShake(4, 0.1);
+                arrow.remove();
+                arrowsToRemove.push(i);
+                break; // Arrow hit someone, move to next arrow
+              }
+            } catch (error) {
+              console.error('Error checking arrow-player collision:', error);
             }
           }
         }
+        
+        // Check arrow pickup (only if embedded)
+        if (arrow.embedded) {
+          for (const player of this.players) {
+            if (!player || player.dead) continue;
+            try {
+              if (this.collisions.checkArrowPickup(player, arrow, 16)) {
+                if (player.pickupArrow()) {
+                  arrow.remove();
+                  arrowsToRemove.push(i);
+                  break; // Arrow picked up, move to next arrow
+                }
+              }
+            } catch (error) {
+              console.error('Error checking arrow pickup:', error);
+            }
+          }
+        }
+        
+        // Mark inactive arrows for removal
+        if (!arrow.active) {
+          arrowsToRemove.push(i);
+        }
+      } catch (error) {
+        console.error('Error updating arrow:', error);
+        arrowsToRemove.push(i);
       }
-      
-      // Remove inactive arrows
-      if (!arrow.active) {
-        this.arrows.splice(i, 1);
-      }
+    }
+    
+    // Remove inactive arrows (in reverse order to maintain indices)
+    for (let i = arrowsToRemove.length - 1; i >= 0; i--) {
+      this.arrows.splice(arrowsToRemove[i], 1);
     }
     
     // Check for round end

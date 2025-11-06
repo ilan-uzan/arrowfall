@@ -28,40 +28,52 @@ export class Player {
   }
 
   update(dt, world, actions) {
-    if (this.dead || !actions) return;
-
-    // Horizontal movement
-    let targetVx = 0;
-    if (actions.left) {
-      targetVx = -MAX_VEL_X;
-      this.facing = -1;
-    } else if (actions.right) {
-      targetVx = MAX_VEL_X;
-      this.facing = 1;
+    if (this.dead || !actions || !world || !this.physics) {
+      return null;
     }
 
-    this.physics.applyHorizontalMovement(this, targetVx, dt, !this.onGround);
-
-    // Jumping
-    if (actions.jump) {
-      this.physics.applyJump(this, true);
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60; // Default to 60 FPS if invalid
     }
 
-    // Wall slide
-    this.physics.applyWallSlide(this, actions.left, actions.right);
+    try {
+      // Horizontal movement
+      let targetVx = 0;
+      if (actions.left) {
+        targetVx = -MAX_VEL_X;
+        this.facing = -1;
+      } else if (actions.right) {
+        targetVx = MAX_VEL_X;
+        this.facing = 1;
+      }
 
-    // Update physics
-    this.physics.updateEntity(this, dt);
+      this.physics.applyHorizontalMovement(this, targetVx, dt, !this.onGround);
 
-    // Shooting
-    if (actions.shoot && !this.shootHeld) {
-      this.shootHeld = true;
-      return this.fireArrow();
+      // Jumping
+      if (actions.jump) {
+        this.physics.applyJump(this, true);
+      }
+
+      // Wall slide
+      this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
+
+      // Update physics
+      this.physics.updateEntity(this, dt);
+
+      // Shooting
+      if (actions.shoot && !this.shootHeld) {
+        this.shootHeld = true;
+        return this.fireArrow();
+      }
+      if (!actions.shoot) {
+        this.shootHeld = false;
+      }
+      return null;
+    } catch (error) {
+      console.error(`Error updating player ${this.id}:`, error);
+      return null;
     }
-    if (!actions.shoot) {
-      this.shootHeld = false;
-    }
-    return null;
   }
 
   fireArrow() {
