@@ -42,14 +42,11 @@ export class Player {
       if (this.vx === undefined) this.vx = 0;
       if (this.vy === undefined) this.vy = 0;
       
-      // Check ground state BEFORE movement to ensure accurate inAir calculation
-      // This is important because onGround might not be set correctly initially
-      if (this.onGround === undefined) {
-        // First frame - check ground state
-        this.onGround = world.checkOnGround ? world.checkOnGround(this) : false;
-      }
+      // CRITICAL: Update physics FIRST to get accurate ground state
+      // This ensures onGround is set correctly before we use it
+      this.physics.updateEntity(this, dt);
       
-      // Use current ground state for movement
+      // Now use the updated ground state for movement
       const inAir = !this.onGround;
       
       // Horizontal movement - use axisX proportionally for smooth control
@@ -99,7 +96,7 @@ export class Player {
         this.vx *= 0.9;
       }
 
-      // Apply movement BEFORE physics update (uses previous frame's ground state)
+      // Apply movement (physics already updated, so we have accurate ground state)
       this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
 
       // Jumping
@@ -109,8 +106,9 @@ export class Player {
 
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
-
-      // Update physics (this applies velocity to position and updates ground state)
+      
+      // Apply velocity to position (physics.updateEntity already did this, but we need to apply movement changes)
+      // Actually, we need to call updateEntity again to apply the velocity changes from movement
       this.physics.updateEntity(this, dt);
 
       // Shooting

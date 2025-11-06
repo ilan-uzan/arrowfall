@@ -66,13 +66,16 @@ export class NPC {
     }
 
     try {
-      // Use current ground state (from previous frame) for movement
+      // CRITICAL: Update physics FIRST to get accurate ground state
+      this.physics.updateEntity(this, dt);
+      
+      // Now use the updated ground state for movement
       const inAir = !this.onGround;
       
       // Update AI behavior to determine movement
       const newArrow = this.updateBehavior(dt, world, player, arrows || [], inAir);
       
-      // Update physics AFTER movement is determined (applies velocity to position)
+      // Apply movement changes by updating physics again
       this.physics.updateEntity(this, dt);
       
       return newArrow;
