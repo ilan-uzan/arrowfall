@@ -82,17 +82,20 @@ export class VersusScene {
           this.countdownText = '2';
         } else if (this.countdown > 0) {
           this.countdownText = '1';
-        } else {
-          this.countdownText = 'GO!';
-          this.roundActive = true;
-          setTimeout(() => {
+      } else {
+        this.countdownText = 'GO!';
+        this.roundActive = true;
+        // Clear GO! after brief display
+        setTimeout(() => {
+          if (this.countdownText === 'GO!') {
             this.countdownText = '';
-          }, 500);
-        }
-        return;
+          }
+        }, 500);
       }
-      
-      if (!this.roundActive) return;
+      return;
+    }
+    
+    if (!this.roundActive) return;
     
     // Update all players with error handling
     for (const player of this.players) {

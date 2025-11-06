@@ -13,7 +13,7 @@ export class Player {
     this.vx = 0;
     this.vy = 0;
     this.color = color;
-    this.facing = 1; // 1 = right, -1 = left
+    this.facing = id === 1 ? 1 : (id === 2 ? -1 : 1); // Alternate facing direction
     this.onGround = false;
     this.wasOnGround = false;
     this.touchingWall = { left: false, right: false };

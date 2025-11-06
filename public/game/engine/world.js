@@ -160,57 +160,76 @@ export class World {
     const bottomTile = Math.floor((y + height) / this.tileSize);
 
     // Check horizontal collisions FIRST (before vertical)
-    let collidedLeft = false;
-    let collidedRight = false;
-    
+    // Only resolve if actually moving in that direction
     for (let ty = topTile; ty <= bottomTile; ty++) {
       if (this.isSolid(leftTile, ty)) {
-        collidedLeft = true;
+        // Push out to the right
         entity.x = (leftTile + 1) * this.tileSize;
+        // Only stop if moving left
         if (entity.vx !== undefined && entity.vx < 0) {
           entity.vx = 0;
         }
+        // Update touching wall
+        entity.touchingWall.left = true;
       }
       if (this.isSolid(rightTile, ty)) {
-        collidedRight = true;
+        // Push out to the left
         entity.x = rightTile * this.tileSize - width;
+        // Only stop if moving right
         if (entity.vx !== undefined && entity.vx > 0) {
           entity.vx = 0;
         }
+        // Update touching wall
+        entity.touchingWall.right = true;
       }
     }
 
     // Check vertical collisions AFTER horizontal
-    let collidedTop = false;
-    let collidedBottom = false;
-    
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.isSolid(tx, topTile)) {
-        collidedTop = true;
+        // Push down
         entity.y = (topTile + 1) * this.tileSize;
+        // Only stop if moving up
         if (entity.vy !== undefined && entity.vy < 0) {
           entity.vy = 0;
         }
       }
       if (this.isSolid(tx, bottomTile)) {
-        collidedBottom = true;
+        // Push up
         entity.y = bottomTile * this.tileSize - height;
+        // Only stop if moving down
         if (entity.vy !== undefined && entity.vy > 0) {
           entity.vy = 0;
         }
+        // Mark as on ground
         if (entity.onGround !== undefined) {
           entity.onGround = true;
         }
       }
     }
     
-    // Clamp to world bounds as final safety
+    // Final safety clamp to world bounds
     const worldWidth = this.width * this.tileSize;
     const worldHeight = this.height * this.tileSize;
-    if (entity.x < 0) entity.x = 0;
-    if (entity.x + width > worldWidth) entity.x = worldWidth - width;
-    if (entity.y < 0) entity.y = 0;
-    if (entity.y + height > worldHeight) entity.y = worldHeight - height;
+    if (entity.x < 0) {
+      entity.x = 0;
+      entity.vx = 0;
+    }
+    if (entity.x + width > worldWidth) {
+      entity.x = worldWidth - width;
+      entity.vx = 0;
+    }
+    if (entity.y < 0) {
+      entity.y = 0;
+      entity.vy = 0;
+    }
+    if (entity.y + height > worldHeight) {
+      entity.y = worldHeight - height;
+      entity.vy = 0;
+      if (entity.onGround !== undefined) {
+        entity.onGround = true;
+      }
+    }
   }
 
   // Line of sight check (for NPC AI)

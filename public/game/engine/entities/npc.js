@@ -21,7 +21,7 @@ export class NPC {
     this.vx = 0;
     this.vy = 0;
     this.color = color;
-    this.facing = 1;
+    this.facing = Math.random() > 0.5 ? 1 : -1; // Random initial facing
     this.onGround = false;
     this.wasOnGround = false;
     this.touchingWall = { left: false, right: false };
@@ -36,7 +36,7 @@ export class NPC {
     this.stateTimer = 0;
     this.targetX = 0;
     this.targetY = 0;
-    this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
+    this.patrolDirection = this.facing; // Start with same direction as facing
     this.reactionDelay = 0.3;
     this.aimJitter = 8;
     this.lastShootTime = 0;
@@ -167,7 +167,13 @@ export class NPC {
       case NPC_STATE.AIM:
         // Face player
         this.facing = dx > 0 ? 1 : -1;
-        this.vx = 0; // Stop to aim
+        
+        // Stop to aim - use physics system
+        if (this.physics) {
+          this.physics.applyHorizontalMovement(this, 0, dt, !this.onGround);
+        } else {
+          this.vx = 0;
+        }
         
         // After reaction delay, shoot
         if (this.stateTimer >= this.reactionDelay && this.lastShootTime >= this.shootCooldown) {
