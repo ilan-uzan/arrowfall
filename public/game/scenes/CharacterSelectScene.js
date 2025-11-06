@@ -159,10 +159,10 @@ export class CharacterSelectScene {
       }
     }
 
-    // Status messages
+    // Status messages (optimized - use readyCount instead of filter)
     const allReady = this.players.length >= this.minPlayers && 
-                     this.players.every(p => p.ready) && 
-                     this.players.length === this.readyCount;
+                     this.readyCount === this.players.length && 
+                     this.players.length >= this.minPlayers;
     
     if (allReady) {
       ctx.fillStyle = PALETTE.accent;

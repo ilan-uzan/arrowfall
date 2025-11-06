@@ -127,7 +127,9 @@ export class NPC {
     }
 
     // Retrieve arrows if low on ammo (only check every 0.5s to reduce overhead)
-    if (this.arrows < 2 && this.state !== NPC_STATE.RETRIEVE && this.state !== NPC_STATE.EVADE && this.stateTimer % 0.5 < dt) {
+    this.arrowCheckTimer = (this.arrowCheckTimer || 0) + dt;
+    if (this.arrows < 2 && this.state !== NPC_STATE.RETRIEVE && this.state !== NPC_STATE.EVADE && this.arrowCheckTimer >= 0.5) {
+      this.arrowCheckTimer = 0;
       // Look for nearby embedded arrows - check survival scene first
       const survival = this.game.sceneManager.scenes.survival;
       const arrows = survival ? survival.arrows : [];

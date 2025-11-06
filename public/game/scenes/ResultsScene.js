@@ -139,17 +139,19 @@ export class ResultsScene {
       ctx.fillText(`PLAYER ${this.winner} WINS!`, w / 2, h / 3);
     }
 
-    // Round scores
+    // Round scores (optimized)
     const arena = this.game.sceneManager.scenes.arena;
     if (arena && arena.roundWins) {
       ctx.fillStyle = PALETTE.ink;
       ctx.font = '16px monospace';
       ctx.textAlign = 'center';
       let y = h / 2;
-      Object.entries(arena.roundWins).forEach(([playerId, wins]) => {
+      // Use for...in instead of Object.entries for better performance
+      for (const playerId in arena.roundWins) {
+        const wins = arena.roundWins[playerId];
         ctx.fillText(`Player ${playerId}: ${wins} wins`, w / 2, y);
         y += 20;
-      });
+      }
     } else {
       // Fallback if arena not available
       ctx.fillStyle = PALETTE.sub;
