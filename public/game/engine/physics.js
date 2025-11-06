@@ -45,7 +45,6 @@ export class PhysicsSystem {
 
       // Update position (use clamped dt)
       if (entity.vx === undefined) entity.vx = 0;
-      const clampedDt = Math.max(0, Math.min(dt, 0.1));
       entity.x += entity.vx * clampedDt;
       entity.y += entity.vy * clampedDt;
 

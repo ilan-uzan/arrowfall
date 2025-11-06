@@ -110,10 +110,10 @@ export class NPC {
       
       // Find nearest embedded arrow
       let nearestArrow = null;
-      let nearestDistSq = 10000; // 100^2
+      let nearestDistSq = 25000; // 150^2 - increased range
       
       for (const arrow of arrows) {
-        if (!arrow.embedded) continue;
+        if (!arrow || !arrow.embedded || !arrow.active) continue;
         
         const arrowDx = this.x - arrow.x;
         const arrowDy = this.y - arrow.y;
@@ -149,8 +149,8 @@ export class NPC {
           this.stateTimer = 0;
         }
         
-        // Transition to aim if player is visible (200^2 = 40000)
-        if (distSq < 40000 && Math.abs(dy) < 60 && world.hasLineOfSight(this.x, this.y, player.x, player.y)) {
+        // Transition to aim if player is visible and close enough (200^2 = 40000)
+        if (distSq < 40000 && Math.abs(dy) < 80 && world.hasLineOfSight && world.hasLineOfSight(this.x, this.y, player.x, player.y)) {
           this.state = NPC_STATE.AIM;
           this.stateTimer = 0;
         }
