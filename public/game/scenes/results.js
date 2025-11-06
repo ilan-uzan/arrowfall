@@ -8,12 +8,14 @@ export class ResultsScene {
     this.buttons = ['Play Again', 'Mode Select'];
     this.animationTime = 0;
     this.lastNavTime = 0;
+    this.scoreSaved = false;
   }
 
   enter() {
     this.selectedButton = 0;
     this.animationTime = 0;
     this.lastNavTime = 0;
+    this.scoreSaved = false;
     console.log('Results scene entered');
   }
 
@@ -77,6 +79,12 @@ export class ResultsScene {
       ctx.font = 'bold 14px monospace';
       ctx.fillText(`Player ${this.game.matchWinner.id} Wins!`, w / 2, 60);
       
+      // Save score to database
+      if (this.game.matchWinner && !this.scoreSaved) {
+        this.saveVersusScore(this.game.matchWinner.id, this.game.matchScores[this.game.matchWinner.id]);
+        this.scoreSaved = true;
+      }
+      
       // Scores
       ctx.fillStyle = PALETTE.sub;
       ctx.font = '10px monospace';
@@ -133,15 +141,38 @@ export class ResultsScene {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           wave: wave,
-          duration_seconds: Math.floor(this.animationTime)
+          duration_seconds: Math.floor(this.animationTime || 0)
         })
       });
       const data = await response.json();
       if (data.ok) {
-        console.log('Survival run saved:', data);
+        console.log('Survival run saved to database:', data);
+      } else {
+        console.warn('Survival run not saved (database may not be configured):', data);
       }
     } catch (error) {
-      console.error('Failed to save survival run:', error);
+      console.warn('Failed to save survival run (database may not be configured):', error);
+    }
+  }
+
+  async saveVersusScore(playerId, wins) {
+    try {
+      const response = await fetch('/api/score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'versus',
+          value: wins
+        })
+      });
+      const data = await response.json();
+      if (data.ok) {
+        console.log('Versus score saved to database:', data);
+      } else {
+        console.warn('Score not saved (database may not be configured):', data);
+      }
+    } catch (error) {
+      console.warn('Failed to save score (database may not be configured):', error);
     }
   }
 }
