@@ -15,17 +15,22 @@ export class TitleScene {
     // Auto-bind first connected gamepad for menu navigation
     this.game.inputRouter.updateGamepads();
     if (this.game.inputRouter.gamepads.length > 0) {
+      // Clear any existing bindings first
+      this.game.inputRouter.playerBindings = {};
+      this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+    }
+  }
+  
+  update(dt) {
+    this.animationTime += dt;
+    // Continuously check for new gamepads
+    this.game.inputRouter.updateGamepads();
+    // Auto-bind first gamepad if not bound
+    if (this.game.inputRouter.gamepads.length > 0 && !this.game.inputRouter.playerBindings[1]) {
       this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
     }
   }
 
-  exit() {
-    // Cleanup if needed
-  }
-
-  update(dt) {
-    this.animationTime += dt;
-  }
 
   handleInput(actions, playerId) {
     if (!actions) return;
@@ -96,6 +101,7 @@ export class TitleScene {
     // Check controller status
     this.game.inputRouter.updateGamepads();
     const connectedCount = this.game.inputRouter.gamepads.length;
+    const gamepads = this.game.inputRouter.gamepads;
     
     // Subtitle with controller count
     ctx.fillStyle = connectedCount > 0 ? PALETTE.accent : PALETTE.accent2;
@@ -105,7 +111,26 @@ export class TitleScene {
     if (connectedCount === 0) {
       ctx.fillStyle = PALETTE.accent2;
       ctx.font = '10px monospace';
-      ctx.fillText('Connect a PS5 controller to continue', w / 2, h / 3 + 22);
+      ctx.fillText('Press any button on controller to connect', w / 2, h / 3 + 22);
+      ctx.fillText('(Some browsers require user interaction)', w / 2, h / 3 + 34);
+    } else {
+      // Show controller info
+      gamepads.forEach((pad, i) => {
+        const binding = Object.values(this.game.inputRouter.playerBindings)
+          .find(b => b.type === 'gamepad' && b.id === pad.index);
+        const boundTo = binding ? `P${Object.keys(this.game.inputRouter.playerBindings).find(id => this.game.inputRouter.playerBindings[id] === binding)}` : 'Unbound';
+        
+        ctx.fillStyle = PALETTE.sub;
+        ctx.font = '9px monospace';
+        const padName = pad.id.length > 20 ? pad.id.substring(0, 17) + '...' : pad.id;
+        ctx.fillText(`${i + 1}. ${padName} → ${boundTo}`, w / 2, h / 3 + 22 + (i * 12));
+        
+        // Show button test
+        if (pad.buttons[0]?.pressed) {
+          ctx.fillStyle = PALETTE.accent;
+          ctx.fillText('Button 0 (A/Cross) pressed!', w / 2, h / 3 + 22 + (connectedCount * 12) + 12);
+        }
+      });
     }
 
     // Buttons

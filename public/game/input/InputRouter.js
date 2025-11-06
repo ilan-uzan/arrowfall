@@ -10,11 +10,14 @@ export class InputRouter {
   }
 
   setupGamepad() {
+    // Listen for gamepad connection events
     window.addEventListener('gamepadconnected', (e) => {
+      console.log('Gamepad connected:', e.gamepad.id, e.gamepad.index);
       this.updateGamepads();
     });
 
     window.addEventListener('gamepaddisconnected', (e) => {
+      console.log('Gamepad disconnected:', e.gamepad.index);
       this.updateGamepads();
       // Remove bindings for disconnected pad
       for (const [playerId, binding] of Object.entries(this.playerBindings)) {
@@ -23,11 +26,41 @@ export class InputRouter {
         }
       }
     });
+    
+    // Request gamepad access (required for some browsers)
+    // User must interact with page first
+    if (navigator.getGamepads) {
+      // Initial check
+      this.updateGamepads();
+    }
   }
 
   updateGamepads() {
+    // Poll gamepads - this is required for proper detection
     const pads = navigator.getGamepads();
+    if (!pads) {
+      this.gamepads = [];
+      return;
+    }
     this.gamepads = Array.from(pads).filter(p => p !== null);
+  }
+  
+  // Debug: Get raw gamepad info
+  getGamepadInfo(gamepadIndex) {
+    this.updateGamepads();
+    const pad = this.gamepads.find(p => p && p.index === gamepadIndex);
+    if (!pad) return null;
+    
+    return {
+      id: pad.id,
+      index: pad.index,
+      buttons: pad.buttons.map((b, i) => ({ 
+        index: i, 
+        pressed: b.pressed, 
+        value: b.value 
+      })),
+      axes: pad.axes.map((a, i) => ({ index: i, value: a }))
+    };
   }
 
   // Try to bind a gamepad to a player
@@ -49,20 +82,42 @@ export class InputRouter {
     const pad = this.gamepads.find(p => p && p.index === gamepadIndex);
     if (!pad) return null;
 
+    // Check if gamepad is still connected
+    if (!pad.connected) return null;
+
     const deadzone = 0.22;
     const leftStickX = pad.axes[0] || 0;
     const leftStickY = pad.axes[1] || 0;
-    const dPadX = pad.buttons[15]?.pressed ? -1 : (pad.buttons[14]?.pressed ? 1 : 0);
-    const dPadY = pad.buttons[12]?.pressed ? -1 : (pad.buttons[13]?.pressed ? 1 : 0);
+    
+    // D-Pad mapping (standard gamepad layout)
+    // Note: D-Pad buttons vary by gamepad type
+    // Standard: 12=Up, 13=Down, 14=Left, 15=Right
+    // Some gamepads use different indices
+    let dPadX = 0;
+    let dPadY = 0;
+    
+    // Try standard D-Pad indices first
+    if (pad.buttons[15]) {
+      dPadX = pad.buttons[15].pressed ? 1 : (pad.buttons[14]?.pressed ? -1 : 0);
+    }
+    if (pad.buttons[13]) {
+      dPadY = pad.buttons[13].pressed ? 1 : (pad.buttons[12]?.pressed ? -1 : 0);
+    }
     
     // Use D-Pad for menu navigation if stick is not active
     const moveX = Math.abs(leftStickX) > deadzone ? leftStickX : dPadX;
     const moveY = Math.abs(leftStickY) > deadzone ? leftStickY : dPadY;
     
-    // Track button states for single-frame press detection
+    // Button mapping (standard gamepad layout)
+    // 0 = A/Cross (Jump)
+    // 1 = B/Circle
+    // 2 = X/Square (Shoot)
+    // 3 = Y/Triangle
+    // 7 = R2/RT (Shoot alt)
+    // 9 = Start/Options (Pause/Join)
     const button0Pressed = pad.buttons[0]?.pressed || false; // A/Cross
     const button2Pressed = pad.buttons[2]?.pressed || false; // X/Square
-    const button7Pressed = pad.buttons[7]?.value > 0.3 || false; // R2
+    const button7Pressed = (pad.buttons[7]?.value || 0) > 0.3 || pad.buttons[7]?.pressed || false; // R2
     const button9Pressed = pad.buttons[9]?.pressed || false; // Start/Options
     
     const key = `pad${gamepadIndex}`;

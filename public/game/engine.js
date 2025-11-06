@@ -82,6 +82,9 @@ export class GameEngine {
     const dt = Math.min((currentTime - this.lastTime) / 1000, 1/30) * this.timeScale;
     this.lastTime = currentTime;
 
+    // Update gamepads (poll every frame)
+    this.inputRouter.updateGamepads();
+
     // Update screen shake
     this.updateScreenShake(dt);
     

@@ -11,6 +11,20 @@
     <canvas id="game-canvas"></canvas>
   </div>
   <script type="module" src="/game/engine.js"></script>
+  <script>
+    // Request gamepad access on user interaction
+    window.addEventListener('click', () => {
+      if (navigator.getGamepads) {
+        navigator.getGamepads(); // Request gamepad access
+      }
+    });
+    
+    window.addEventListener('keydown', () => {
+      if (navigator.getGamepads) {
+        navigator.getGamepads(); // Request gamepad access
+      }
+    });
+  </script>
 </body>
 </html>
 
