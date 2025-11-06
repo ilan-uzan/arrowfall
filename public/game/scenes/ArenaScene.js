@@ -147,24 +147,38 @@ export class ArenaScene {
       }
     });
 
-    // Update arrows
-    this.arrows.forEach(arrow => {
+    // Update arrows (remove inactive arrows to reduce overhead)
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
       arrow.update(dt, this.level);
-    });
+      if (!arrow.active) {
+        this.arrows.splice(i, 1);
+      }
+    }
 
-    // Update particles
-    this.particles.forEach(particle => {
+    // Update particles (remove inactive particles to reduce overhead)
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const particle = this.particles[i];
       particle.update(dt);
-    });
-    this.particles = this.particles.filter(p => p.active);
+      if (!particle.active) {
+        this.particles.splice(i, 1);
+      }
+    }
 
     // Check collisions
     this.checkCollisions(dt);
 
-    // Check round end
-    const alivePlayers = this.players.filter(p => !p.dead);
-    if (alivePlayers.length <= 1) {
-      this.endRound(alivePlayers[0]);
+    // Check round end (optimized - count alive players)
+    let aliveCount = 0;
+    let lastAlivePlayer = null;
+    for (const player of this.players) {
+      if (!player.dead) {
+        aliveCount++;
+        lastAlivePlayer = player;
+      }
+    }
+    if (aliveCount <= 1) {
+      this.endRound(lastAlivePlayer);
     }
   }
 
@@ -218,12 +232,16 @@ export class ArenaScene {
       for (const player of this.players) {
         if (player.dead) continue;
         
-        const dist = Math.sqrt(
-          Math.pow(player.x + player.width/2 - (arrow.x + arrow.width/2), 2) +
-          Math.pow(player.y + player.height/2 - (arrow.y + arrow.height/2), 2)
-        );
+        // Use squared distance for comparison (16^2 = 256)
+        const playerCenterX = player.x + player.width/2;
+        const playerCenterY = player.y + player.height/2;
+        const arrowCenterX = arrow.x + arrow.width/2;
+        const arrowCenterY = arrow.y + arrow.height/2;
+        const dx = playerCenterX - arrowCenterX;
+        const dy = playerCenterY - arrowCenterY;
+        const distSq = dx * dx + dy * dy;
         
-        if (dist < 16) {
+        if (distSq < 256) {
           if (player.pickupArrow()) {
             arrow.remove();
             this.game.audio.playPickup();

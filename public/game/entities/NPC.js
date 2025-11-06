@@ -113,35 +113,48 @@ export class NPC {
     this.stateTimer += dt;
     this.lastShootTime += dt;
 
+    // Cache player distance calculations (avoid repeated Math.sqrt)
     const dx = player.x - this.x;
     const dy = player.y - this.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+    const distSq = dx * dx + dy * dy; // Use squared distance for comparisons
+    const dist = Math.sqrt(distSq); // Only calculate when needed
 
-    // Maintain distance - if too close, evade
-    if (dist < 80 && this.state !== NPC_STATE.EVADE) {
+    // Maintain distance - if too close, evade (use squared distance: 80^2 = 6400)
+    if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {
       this.state = NPC_STATE.EVADE;
       this.stateTimer = 0;
       this.evadeDirection = dx > 0 ? -1 : 1;
     }
 
-    // Retrieve arrows if low on ammo
-    if (this.arrows < 2 && this.state !== NPC_STATE.RETRIEVE && this.state !== NPC_STATE.EVADE) {
-      // Look for nearby embedded arrows
-      const arena = this.game.sceneManager.scenes.arena;
-      if (arena) {
-        const nearbyArrow = arena.arrows.find(arrow => {
-          if (!arrow.embedded) return false;
-          const dist = Math.sqrt(
-            Math.pow(this.x - arrow.x, 2) + Math.pow(this.y - arrow.y, 2)
-          );
-          return dist < 100;
-        });
-        if (nearbyArrow) {
-          this.state = NPC_STATE.RETRIEVE;
-          this.stateTimer = 0;
-          this.targetX = nearbyArrow.x;
-          this.targetY = nearbyArrow.y;
+    // Retrieve arrows if low on ammo (only check every 0.5s to reduce overhead)
+    if (this.arrows < 2 && this.state !== NPC_STATE.RETRIEVE && this.state !== NPC_STATE.EVADE && this.stateTimer % 0.5 < dt) {
+      // Look for nearby embedded arrows - check survival scene first
+      const survival = this.game.sceneManager.scenes.survival;
+      const arrows = survival ? survival.arrows : [];
+      
+      // Use squared distance for comparison (100^2 = 10000)
+      let nearestArrow = null;
+      let nearestDistSq = 10000;
+      
+      for (let i = 0; i < arrows.length; i++) {
+        const arrow = arrows[i];
+        if (!arrow.embedded) continue;
+        
+        const arrowDx = this.x - arrow.x;
+        const arrowDy = this.y - arrow.y;
+        const arrowDistSq = arrowDx * arrowDx + arrowDy * arrowDy;
+        
+        if (arrowDistSq < nearestDistSq) {
+          nearestDistSq = arrowDistSq;
+          nearestArrow = arrow;
         }
+      }
+      
+      if (nearestArrow) {
+        this.state = NPC_STATE.RETRIEVE;
+        this.stateTimer = 0;
+        this.targetX = nearestArrow.x;
+        this.targetY = nearestArrow.y;
       }
     }
 
@@ -158,8 +171,8 @@ export class NPC {
           this.stateTimer = 0;
         }
         
-        // Transition to aim if player is visible
-        if (dist < 200 && Math.abs(dy) < 60) {
+        // Transition to aim if player is visible (use squared distance: 200^2 = 40000)
+        if (distSq < 40000 && Math.abs(dy) < 60) {
           this.state = NPC_STATE.AIM;
           this.stateTimer = 0;
         }
@@ -176,8 +189,8 @@ export class NPC {
           this.stateTimer = 0;
         }
         
-        // If player moved away, return to patrol
-        if (dist > 250 || Math.abs(dy) > 80) {
+        // If player moved away, return to patrol (use squared distance: 250^2 = 62500)
+        if (distSq > 62500 || Math.abs(dy) > 80) {
           this.state = NPC_STATE.PATROL;
           this.stateTimer = 0;
         }
@@ -197,12 +210,13 @@ export class NPC {
           const arrowVy = Math.sin(angle) * ARROW_SPEED;
           
           const arrow = new Arrow(spawnX, spawnY, arrowVx, arrowVy, this.id, this.game);
-          const arena = this.game.sceneManager.scenes.arena;
+          // Add arrow to correct scene (prefer survival for NPCs)
           const survival = this.game.sceneManager.scenes.survival;
-          if (arena) {
-            arena.arrows.push(arrow);
-          } else if (survival) {
+          const arena = this.game.sceneManager.scenes.arena;
+          if (survival) {
             survival.arrows.push(arrow);
+          } else if (arena) {
+            arena.arrows.push(arrow);
           }
           this.game.audio.playShoot();
           this.lastShootTime = 0;
@@ -224,8 +238,8 @@ export class NPC {
           this.game.audio.playJump();
         }
         
-        // Return to patrol after evading
-        if (this.stateTimer > 1.0 || dist > 150) {
+        // Return to patrol after evading (use squared distance: 150^2 = 22500)
+        if (this.stateTimer > 1.0 || distSq > 22500) {
           this.state = NPC_STATE.PATROL;
           this.stateTimer = 0;
         }
@@ -245,11 +259,11 @@ export class NPC {
           this.stateTimer = 0;
         }
         
-        // Check if arrow reached
-        const arrowDist = Math.sqrt(
-          Math.pow(this.x - this.targetX, 2) + Math.pow(this.y - this.targetY, 2)
-        );
-        if (arrowDist < 16) {
+        // Check if arrow reached (use squared distance: 16^2 = 256)
+        const targetDx = this.x - this.targetX;
+        const targetDy = this.y - this.targetY;
+        const arrowDistSq = targetDx * targetDx + targetDy * targetDy;
+        if (arrowDistSq < 256) {
           // Pickup arrow
           if (this.arrows < this.maxArrows) {
             this.arrows++;

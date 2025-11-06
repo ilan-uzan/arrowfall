@@ -98,39 +98,40 @@ export class TitleScene {
     ctx.textBaseline = 'middle';
     ctx.fillText('ARROWFALL', w / 2, h / 3 - 20);
 
-    // Check controller status
-    this.game.inputRouter.updateGamepads();
+    // Check controller status (cache to avoid repeated calculations)
     const connectedCount = this.game.inputRouter.gamepads.length;
-    const gamepads = this.game.inputRouter.gamepads;
     
     // Subtitle with controller count
     ctx.fillStyle = connectedCount > 0 ? PALETTE.accent : PALETTE.accent2;
     ctx.font = '10px monospace';
-    ctx.fillText(`Controllers: ${connectedCount} | Left Stick / D-Pad: Navigate | A/Cross: Select`, w / 2, h / 3 + 10);
+    ctx.fillText(`Controllers: ${connectedCount} | Left Stick / D-Pad: Navigate | Cross: Select`, w / 2, h / 3 + 10);
     
     if (connectedCount === 0) {
       ctx.fillStyle = PALETTE.accent2;
       ctx.font = '10px monospace';
       ctx.fillText('Press any button on controller to connect', w / 2, h / 3 + 22);
-      ctx.fillText('(Some browsers require user interaction)', w / 2, h / 3 + 34);
-    } else {
-      // Show controller info
-      gamepads.forEach((pad, i) => {
-        const binding = Object.values(this.game.inputRouter.playerBindings)
-          .find(b => b.type === 'gamepad' && b.id === pad.index);
-        const boundTo = binding ? `P${Object.keys(this.game.inputRouter.playerBindings).find(id => this.game.inputRouter.playerBindings[id] === binding)}` : 'Unbound';
+    } else if (connectedCount > 0 && connectedCount <= 2) {
+      // Only show controller info if there are controllers (limit to 2 for performance)
+      const gamepads = this.game.inputRouter.gamepads;
+      const playerBindings = this.game.inputRouter.playerBindings;
+      
+      for (let i = 0; i < Math.min(gamepads.length, 2); i++) {
+        const pad = gamepads[i];
+        let boundTo = 'Unbound';
+        
+        // Find binding more efficiently
+        for (const [playerId, binding] of Object.entries(playerBindings)) {
+          if (binding.type === 'gamepad' && binding.id === pad.index) {
+            boundTo = `P${playerId}`;
+            break;
+          }
+        }
         
         ctx.fillStyle = PALETTE.sub;
         ctx.font = '9px monospace';
         const padName = pad.id.length > 20 ? pad.id.substring(0, 17) + '...' : pad.id;
         ctx.fillText(`${i + 1}. ${padName} → ${boundTo}`, w / 2, h / 3 + 22 + (i * 12));
-        
-        // Show button test
-        if (pad.buttons[0]?.pressed) {
-          ctx.fillStyle = PALETTE.accent;
-          ctx.fillText('Button 0 (A/Cross) pressed!', w / 2, h / 3 + 22 + (connectedCount * 12) + 12);
-        }
-      });
+      }
     }
 
     // Buttons

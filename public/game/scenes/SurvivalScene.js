@@ -157,23 +157,33 @@ export class SurvivalScene {
       }
     }
 
-    // Update NPCs
-    this.npcs.forEach(npc => {
-      if (!npc.dead) {
-        npc.update(dt, this.level, this.player);
+    // Update NPCs (remove dead NPCs to reduce loop overhead)
+    for (let i = this.npcs.length - 1; i >= 0; i--) {
+      const npc = this.npcs[i];
+      if (npc.dead) {
+        this.npcs.splice(i, 1);
+        continue;
       }
-    });
+      npc.update(dt, this.level, this.player);
+    }
 
-    // Update arrows
-    this.arrows.forEach(arrow => {
+    // Update arrows (remove inactive arrows to reduce overhead)
+    for (let i = this.arrows.length - 1; i >= 0; i--) {
+      const arrow = this.arrows[i];
       arrow.update(dt, this.level);
-    });
+      if (!arrow.active) {
+        this.arrows.splice(i, 1);
+      }
+    }
 
-    // Update particles
-    this.particles.forEach(particle => {
+    // Update particles (remove inactive particles to reduce overhead)
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const particle = this.particles[i];
       particle.update(dt);
-    });
-    this.particles = this.particles.filter(p => p.active);
+      if (!particle.active) {
+        this.particles.splice(i, 1);
+      }
+    }
 
     // Check collisions
     this.checkCollisions(dt);
@@ -191,9 +201,8 @@ export class SurvivalScene {
       }
     }
 
-    // Check wave complete
-    const aliveNPCs = this.npcs.filter(n => !n.dead);
-    if (aliveNPCs.length === 0 && this.waveTimer < 20.0) {
+    // Check wave complete (optimized check)
+    if (this.npcs.length === 0 && this.waveTimer < 20.0) {
       // Wave complete - spawn next wave
       this.wave++;
       this.score += 100 * this.wave;
@@ -247,11 +256,15 @@ export class SurvivalScene {
       if (!arrow.embedded) continue;
       
       if (!this.player.dead) {
-        const dist = Math.sqrt(
-          Math.pow(this.player.x + this.player.width/2 - (arrow.x + arrow.width/2), 2) +
-          Math.pow(this.player.y + this.player.height/2 - (arrow.y + arrow.height/2), 2)
-        );
-        if (dist < 16) {
+        // Use squared distance for comparison (16^2 = 256)
+        const playerCenterX = this.player.x + this.player.width/2;
+        const playerCenterY = this.player.y + this.player.height/2;
+        const arrowCenterX = arrow.x + arrow.width/2;
+        const arrowCenterY = arrow.y + arrow.height/2;
+        const dx = playerCenterX - arrowCenterX;
+        const dy = playerCenterY - arrowCenterY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < 256) {
           if (this.player.pickupArrow()) {
             this.arrows.splice(i, 1);
             this.game.audio.playPickup();
@@ -259,7 +272,26 @@ export class SurvivalScene {
         }
       }
       
-      // NPC arrow pickup (handled in NPC behavior)
+      // NPC arrow pickup (handled in NPC behavior - optimized)
+      for (let j = this.npcs.length - 1; j >= 0; j--) {
+        const npc = this.npcs[j];
+        if (npc.dead || npc.arrows >= npc.maxArrows) continue;
+        
+        const npcCenterX = npc.x + npc.width/2;
+        const npcCenterY = npc.y + npc.height/2;
+        const arrowCenterX = arrow.x + arrow.width/2;
+        const arrowCenterY = arrow.y + arrow.height/2;
+        const dx = npcCenterX - arrowCenterX;
+        const dy = npcCenterY - arrowCenterY;
+        const distSq = dx * dx + dy * dy;
+        
+        if (distSq < 256 && arrow.ownerId !== npc.id) {
+          npc.arrows++;
+          this.arrows.splice(i, 1);
+          this.game.audio.playPickup();
+          break;
+        }
+      }
     }
   }
 
@@ -411,12 +443,11 @@ export class SurvivalScene {
       ctx.fillText(`Arrows: ${this.player.arrows}`, w - 10, 32);
     }
 
-    // NPC count (center)
-    const aliveNPCs = this.npcs.filter(n => !n.dead).length;
+    // NPC count (center) - optimized (npcs.length since dead ones are removed)
     ctx.textAlign = 'center';
     ctx.font = '10px monospace';
-    ctx.fillStyle = aliveNPCs > 0 ? PALETTE.accent2 : PALETTE.accent;
-    ctx.fillText(`${aliveNPCs} NPCs`, w / 2, 18);
+    ctx.fillStyle = this.npcs.length > 0 ? PALETTE.accent2 : PALETTE.accent;
+    ctx.fillText(`${this.npcs.length} NPCs`, w / 2, 18);
 
         // Controls hint (bottom)
         if (this.state === 'playing' && this.player && !this.player.dead) {

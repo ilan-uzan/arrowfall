@@ -65,7 +65,11 @@ export class CharacterSelectScene {
       player.ready = !player.ready;
       this.game.audio.playConfirm();
       
-      this.readyCount = this.players.filter(p => p.ready).length;
+      // Count ready players efficiently
+      this.readyCount = 0;
+      for (const p of this.players) {
+        if (p.ready) this.readyCount++;
+      }
       
       // Check if all players are ready and we have minimum players
       const allReady = this.players.length >= this.minPlayers && 
