@@ -1,4 +1,4 @@
-// Physics System - Classic Platformer Approach
+// Physics System - Classic Platformer (Always Apply Gravity)
 import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
 import { wrapPosition } from './wrap.js';
 
@@ -38,7 +38,7 @@ export class PhysicsSystem {
         entity.coyoteTime -= dt;
       }
 
-      // Apply gravity (always, but we'll stop it on ground collision)
+      // ALWAYS apply gravity (classic platformer approach)
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
       entity.vy += GRAVITY * clampedDt;
       const maxFallSpeed = 640;
@@ -53,21 +53,18 @@ export class PhysicsSystem {
         
         // Check horizontal collision
         if (this.hasCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
-          // Hit wall - stop horizontal movement
+          // Hit wall - stop and snap
           if (moveX > 0) {
-            // Moving right - snap to left side of wall
             const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
             entity.x = rightTile * this.world.tileSize - (entity.width || 12);
             entity.touchingWall.right = true;
           } else {
-            // Moving left - snap to right side of wall
             const leftTile = Math.floor(entity.x / this.world.tileSize);
             entity.x = (leftTile + 1) * this.world.tileSize;
             entity.touchingWall.left = true;
           }
           entity.vx = 0;
         } else {
-          // No collision - move freely
           entity.x = newX;
           entity.touchingWall.left = false;
           entity.touchingWall.right = false;
@@ -95,18 +92,27 @@ export class PhysicsSystem {
             entity.vy = 0;
           }
         } else {
-          // No collision - move freely
           entity.y = newY;
           if (moveY > 0) {
-            // Falling - not on ground
             entity.onGround = false;
           }
         }
       }
 
-      // Final ground check (in case we're standing still)
-      if (entity.vy === 0 && !entity.onGround) {
-        entity.onGround = this.isOnGround(entity);
+      // Final ground check - snap to ground if very close
+      if (!entity.onGround && entity.vy === 0) {
+        const groundCheck = this.isOnGround(entity);
+        if (groundCheck) {
+          entity.onGround = true;
+          // Snap to ground if within 2 pixels
+          const bottomY = entity.y + (entity.height || 14);
+          const tileBelow = Math.floor(bottomY / this.world.tileSize);
+          const groundY = tileBelow * this.world.tileSize;
+          const distance = bottomY - groundY;
+          if (distance > 0 && distance <= 2) {
+            entity.y = groundY - (entity.height || 14);
+          }
+        }
       }
 
       // Update wall touching state
@@ -122,7 +128,7 @@ export class PhysicsSystem {
     }
   }
 
-  // Simple collision check - returns true if there's a collision
+  // Simple collision check
   hasCollision(x, y, width, height) {
     const leftTile = Math.floor(x / this.world.tileSize);
     const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
@@ -139,7 +145,7 @@ export class PhysicsSystem {
     return false;
   }
 
-  // Check if entity is on ground (touching a solid tile below)
+  // Check if entity is on ground
   isOnGround(entity) {
     if (!entity) return false;
     
@@ -156,10 +162,10 @@ export class PhysicsSystem {
 
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.world.isSolid(tx, tileBelow)) {
-        // Check if we're close enough to the ground (within 2 pixels)
+        // Check if we're close enough to the ground (within 3 pixels)
         const groundY = tileBelow * this.world.tileSize;
         const distanceToGround = bottomY - groundY;
-        if (distanceToGround >= -2 && distanceToGround <= 2) {
+        if (distanceToGround >= -3 && distanceToGround <= 3) {
           return true;
         }
       }
@@ -217,7 +223,7 @@ export class PhysicsSystem {
       entity.vx = 0;
     }
     
-    // Simple acceleration towards target
+    // Direct acceleration towards target
     const acceleration = inAir ? MOVE_ACC * 0.6 : MOVE_ACC;
     const friction = inAir ? MOVE_ACC * 0.3 : MOVE_ACC * 0.9;
     
