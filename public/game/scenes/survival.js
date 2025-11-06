@@ -220,9 +220,6 @@ export class SurvivalScene {
     } catch (error) {
       console.error('Critical error in survival update:', error);
     }
-  } catch (error) {
-      console.error('Critical error in survival update:', error);
-    }
   }
 
   exit() {
