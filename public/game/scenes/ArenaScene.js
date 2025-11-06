@@ -73,21 +73,24 @@ export class ArenaScene {
         const spawnKey = `p${config.id}`;
         const spawn = this.level.spawns[spawnKey] || this.level.spawns.p1 || [32, 128];
         const player = new Player(spawn[0], spawn[1], config.id, config.color, this.game);
-        // Ensure player is bound to input
-        if (!this.game.inputRouter.playerBindings[config.id]) {
-          this.game.inputRouter.bindKeyboard(config.id);
-        }
+        // Ensure player is bound to gamepad
         return player;
       });
     } else {
-      // Fallback - create default players and bind them
-      this.players = [
-        new Player(32, 128, 1, PLAYER_COLORS[0], this.game),
-        new Player(288, 128, 2, PLAYER_COLORS[1], this.game)
-      ];
-      // Bind default players to keyboard
-      this.game.inputRouter.bindKeyboard(1);
-      this.game.inputRouter.bindKeyboard(2);
+      // Fallback - create default players if gamepads are connected
+      this.game.inputRouter.updateGamepads();
+      if (this.game.inputRouter.gamepads.length >= 2) {
+        this.players = [
+          new Player(32, 128, 1, PLAYER_COLORS[0], this.game),
+          new Player(288, 128, 2, PLAYER_COLORS[1], this.game)
+        ];
+        // Bind to first two gamepads
+        this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+        this.game.inputRouter.tryBindGamepad(2, this.game.inputRouter.gamepads[1].index);
+      } else {
+        // No gamepads - show message
+        this.players = [];
+      }
     }
 
     // Initialize round wins

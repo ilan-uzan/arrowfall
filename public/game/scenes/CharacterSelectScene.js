@@ -37,19 +37,7 @@ export class CharacterSelectScene {
       }
     }
 
-    // Auto-bind keyboard players
-    if (this.players.length < 2) {
-      for (let i = 1; i <= 2; i++) {
-        if (!this.players.find(p => p.id === i)) {
-          this.game.inputRouter.bindKeyboard(i);
-          this.players.push({
-            id: i,
-            color: PLAYER_COLORS[i - 1],
-            ready: false
-          });
-        }
-      }
-    }
+    // Players must join via gamepad
   }
 
   handleInput(actions, playerId) {
@@ -145,9 +133,12 @@ export class CharacterSelectScene {
       ctx.font = '12px monospace';
       ctx.fillText('All players ready to start!', w / 2, h - 20);
     } else {
+      ctx.fillStyle = PALETTE.accent2;
+      ctx.font = '12px monospace';
+      ctx.fillText('Need at least 2 PS5 controllers', w / 2, h - 20);
       ctx.fillStyle = PALETTE.sub;
       ctx.font = '10px monospace';
-      ctx.fillText('Need at least 2 players', w / 2, h - 20);
+      ctx.fillText('Connect controllers and press A/Cross × to join', w / 2, h - 8);
     }
   }
 }

@@ -12,8 +12,11 @@ export class TitleScene {
   enter() {
     this.selectedButton = 0;
     this.animationTime = 0;
-    // Auto-bind player 1 to keyboard for menu navigation
-    this.game.inputRouter.bindKeyboard(1);
+    // Auto-bind first connected gamepad for menu navigation
+    this.game.inputRouter.updateGamepads();
+    if (this.game.inputRouter.gamepads.length > 0) {
+      this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+    }
   }
 
   exit() {
@@ -77,7 +80,7 @@ export class TitleScene {
     // Subtitle
     ctx.fillStyle = PALETTE.sub;
     ctx.font = '10px monospace';
-    ctx.fillText('Arrow Keys: Navigate | Space/W: Select', w / 2, h / 3 + 10);
+    ctx.fillText('Left Stick / D-Pad: Navigate | A/Cross: Select', w / 2, h / 3 + 10);
 
     // Buttons
     const buttonY = h / 2;

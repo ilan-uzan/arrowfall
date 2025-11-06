@@ -1,43 +1,10 @@
-// Unified input system - Keyboard + Gamepad
+// Gamepad-only input system - PS5 controllers
 export class InputRouter {
   constructor() {
-    this.keys = {};
-    this.keyPresses = {}; // Track key presses for frame
     this.gamepads = [];
-    this.playerBindings = {}; // playerId -> { type: 'keyboard'|'gamepad', id: number }
+    this.playerBindings = {}; // playerId -> { type: 'gamepad', id: number }
     
-    this.setupKeyboard();
     this.setupGamepad();
-  }
-
-  setupKeyboard() {
-    this.keyPresses = {}; // Track key presses for frame
-    
-    window.addEventListener('keydown', (e) => {
-      const key = e.key.toLowerCase();
-      const code = e.code;
-      
-      // Prevent default for game keys
-      if (['w', 'a', 's', 'd', ' ', 'f', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
-        e.preventDefault();
-      }
-      
-      if (!this.keys[key]) {
-        this.keyPresses[key] = true;
-        this.keyPresses[code] = true;
-      }
-      this.keys[key] = true;
-      this.keys[code] = true;
-    });
-
-    window.addEventListener('keyup', (e) => {
-      const key = e.key.toLowerCase();
-      const code = e.code;
-      this.keys[key] = false;
-      this.keys[code] = false;
-      this.keyPresses[key] = false;
-      this.keyPresses[code] = false;
-    });
   }
 
   setupGamepad() {
@@ -68,59 +35,11 @@ export class InputRouter {
     return true;
   }
 
-  // Bind keyboard to a player
-  bindKeyboard(playerId) {
-    this.playerBindings[playerId] = { type: 'keyboard', id: playerId };
-  }
-
-  // Get actions for a player
+  // Get actions for a player (gamepad only)
   getActions(playerId) {
     const binding = this.playerBindings[playerId];
-    if (!binding) return null;
-
-    if (binding.type === 'gamepad') {
-      return this.getGamepadActions(binding.id);
-    } else {
-      return this.getKeyboardActions(playerId);
-    }
-  }
-
-  getKeyboardActions(playerId) {
-    // Default keyboard mappings
-    const mappings = {
-      1: { left: ['a', 'ArrowLeft'], right: ['d', 'ArrowRight'], jump: ['w', ' '], shoot: ['s', 'f'], pause: ['Escape'] },
-      2: { left: ['ArrowLeft'], right: ['ArrowRight'], jump: ['ArrowUp'], shoot: ['ArrowDown'], pause: ['Escape'] },
-      3: { left: ['j'], right: ['l'], jump: ['i'], shoot: ['k'], pause: ['Escape'] },
-      4: { left: ['Numpad4'], right: ['Numpad6'], jump: ['Numpad8'], shoot: ['Numpad5'], pause: ['Escape'] }
-    };
-
-    const map = mappings[playerId] || mappings[1];
-    
-    // Check for key presses (not just held)
-    const jumpPressed = map.jump.some(k => this.keyPresses && this.keyPresses[k]);
-    const shootPressed = map.shoot.some(k => this.keyPresses && this.keyPresses[k]);
-    
-    // Clear key presses after reading
-    if (this.keyPresses) {
-      for (const key of map.jump) {
-        this.keyPresses[key] = false;
-      }
-      for (const key of map.shoot) {
-        this.keyPresses[key] = false;
-      }
-    }
-    
-    return {
-      left: map.left.some(k => this.keys[k]),
-      right: map.right.some(k => this.keys[k]),
-      up: map.jump.some(k => this.keys[k]),
-      down: map.shoot.some(k => this.keys[k]),
-      jumpPressed: jumpPressed || map.jump.some(k => this.keys[k]),
-      shootPressed: shootPressed || map.shoot.some(k => this.keys[k]),
-      pausePressed: map.pause.some(k => this.keys[k]),
-      aimX: 0,
-      aimY: 0
-    };
+    if (!binding || binding.type !== 'gamepad') return null;
+    return this.getGamepadActions(binding.id);
   }
 
   getGamepadActions(gamepadIndex) {
@@ -131,10 +50,18 @@ export class InputRouter {
     const deadzone = 0.22;
     const leftStickX = pad.axes[0] || 0;
     const leftStickY = pad.axes[1] || 0;
+    const dPadX = pad.buttons[15]?.pressed ? -1 : (pad.buttons[14]?.pressed ? 1 : 0);
+    const dPadY = pad.buttons[12]?.pressed ? -1 : (pad.buttons[13]?.pressed ? 1 : 0);
+    
+    // Use D-Pad for menu navigation if stick is not active
+    const moveX = Math.abs(leftStickX) > deadzone ? leftStickX : dPadX;
+    const moveY = Math.abs(leftStickY) > deadzone ? leftStickY : dPadY;
     
     return {
-      left: Math.abs(leftStickX) > deadzone ? leftStickX < -deadzone : false,
-      right: Math.abs(leftStickX) > deadzone ? leftStickX > deadzone : false,
+      left: moveX < -deadzone,
+      right: moveX > deadzone,
+      up: moveY < -deadzone,
+      down: moveY > deadzone,
       jumpPressed: pad.buttons[0]?.pressed || false, // A/Cross
       shootPressed: pad.buttons[2]?.pressed || pad.buttons[7]?.pressed > 0.3, // X/Square or R2
       pausePressed: pad.buttons[9]?.pressed || false, // Start/Options

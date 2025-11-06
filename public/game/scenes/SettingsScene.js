@@ -122,14 +122,12 @@ export class SettingsScene {
     ctx.fillStyle = PALETTE.bg1;
     ctx.fillRect(10, contentY, w - 20, h - contentY - 50);
 
-    // Render tab content
-    if (this.selectedTab === 0) {
-      this.renderControllers(ctx, w, h, contentY);
-    } else if (this.selectedTab === 1) {
-      this.renderKeyboard(ctx, w, h, contentY);
-    } else if (this.selectedTab === 2) {
-      this.renderGamepad(ctx, w, h, contentY);
-    }
+        // Render tab content
+        if (this.selectedTab === 0) {
+          this.renderControllers(ctx, w, h, contentY);
+        } else if (this.selectedTab === 1) {
+          this.renderGamepad(ctx, w, h, contentY);
+        }
 
     // Back button
     const buttonY = h - 30;
@@ -189,59 +187,15 @@ export class SettingsScene {
         y += 18;
       });
       
-      y += 10;
-      ctx.fillStyle = PALETTE.sub;
-      ctx.font = '10px monospace';
-      ctx.fillText('Tip: Press A/Cross to join as Player 2+ in Character Select', 20, y);
+          y += 10;
+          ctx.fillStyle = PALETTE.sub;
+          ctx.font = '10px monospace';
+          ctx.fillText('Tip: Press A/Cross × to join as Player 2+ in Character Select', 20, y);
+          y += 15;
+          ctx.fillText('Requires at least 2 PS5 controllers for multiplayer', 20, y);
     }
   }
 
-  renderKeyboard(ctx, w, h, startY) {
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = 'bold 12px monospace';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-
-    let y = startY + 15;
-    
-    // Player 1 Controls
-    ctx.fillStyle = PALETTE.accent;
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText('PLAYER 1:', 20, y);
-    y += 18;
-
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = '11px monospace';
-    const p1Controls = [
-      'Move Left:  A or ←',
-      'Move Right: D or →',
-      'Jump:       W or Space',
-      'Shoot:      S or F'
-    ];
-    p1Controls.forEach(control => {
-      ctx.fillText(control, 30, y);
-      y += 15;
-    });
-
-    y += 12;
-    ctx.fillStyle = PALETTE.accent;
-    ctx.font = 'bold 12px monospace';
-    ctx.fillText('PLAYER 2 (Fallback):', 20, y);
-    y += 18;
-
-    ctx.fillStyle = PALETTE.ink;
-    ctx.font = '11px monospace';
-    const p2Controls = [
-      'Move Left:  ←',
-      'Move Right: →',
-      'Jump:       ↑',
-      'Shoot:      ↓'
-    ];
-    p2Controls.forEach(control => {
-      ctx.fillText(control, 30, y);
-      y += 15;
-    });
-  }
 
   renderGamepad(ctx, w, h, startY) {
     ctx.fillStyle = PALETTE.ink;

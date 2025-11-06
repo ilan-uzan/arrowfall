@@ -69,8 +69,11 @@ export class SurvivalScene {
   }
 
   enter() {
-    // Auto-bind player 1 to keyboard for survival mode
-    this.game.inputRouter.bindKeyboard(1);
+    // Auto-bind first gamepad for survival mode
+    this.game.inputRouter.updateGamepads();
+    if (this.game.inputRouter.gamepads.length > 0) {
+      this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+    }
     
     // Setup player
     const spawn = this.level.spawns.p1 || [160, 128];
@@ -357,17 +360,20 @@ export class SurvivalScene {
       ctx.restore();
     }
 
-    // Render game over
-    if (this.state === 'gameOver') {
-      ctx.fillStyle = PALETTE.accent2;
-      ctx.font = 'bold 24px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('GAME OVER', w / 2, h / 2);
-      ctx.fillStyle = PALETTE.ink;
-      ctx.font = '16px monospace';
-      ctx.fillText(`Wave: ${this.wave} | Score: ${this.score}`, w / 2, h / 2 + 30);
-    }
+        // Render game over
+        if (this.state === 'gameOver') {
+          ctx.fillStyle = PALETTE.accent2;
+          ctx.font = 'bold 24px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('GAME OVER', w / 2, h / 2);
+          ctx.fillStyle = PALETTE.ink;
+          ctx.font = '16px monospace';
+          ctx.fillText(`Wave: ${this.wave} | Score: ${this.score}`, w / 2, h / 2 + 30);
+          ctx.fillStyle = PALETTE.sub;
+          ctx.font = '12px monospace';
+          ctx.fillText('Press A/Cross × to return to menu', w / 2, h / 2 + 50);
+        }
   }
 
   renderHUD(ctx) {
@@ -400,15 +406,15 @@ export class SurvivalScene {
     ctx.fillStyle = aliveNPCs > 0 ? PALETTE.accent2 : PALETTE.accent;
     ctx.fillText(`${aliveNPCs} NPCs`, w / 2, 18);
 
-    // Controls hint (bottom)
-    if (this.state === 'playing' && this.player && !this.player.dead) {
-      ctx.fillStyle = PALETTE.sub;
-      ctx.font = '9px monospace';
-      ctx.textAlign = 'center';
-      ctx.globalAlpha = 0.6;
-      ctx.fillText('A/D: Move | W/Space: Jump | S/F: Shoot', w / 2, h - 10);
-      ctx.globalAlpha = 1.0;
-    }
+        // Controls hint (bottom)
+        if (this.state === 'playing' && this.player && !this.player.dead) {
+          ctx.fillStyle = PALETTE.sub;
+          ctx.font = '9px monospace';
+          ctx.textAlign = 'center';
+          ctx.globalAlpha = 0.6;
+          ctx.fillText('Left Stick: Move | A/Cross: Jump | X/Square: Shoot', w / 2, h - 10);
+          ctx.globalAlpha = 1.0;
+        }
   }
 }
 
