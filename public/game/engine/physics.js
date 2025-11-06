@@ -1,10 +1,35 @@
-// Physics System - Simplified and Fixed
+// Physics System - Fixed Order of Operations
 import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
 import { wrapPosition } from './wrap.js';
 
 export class PhysicsSystem {
   constructor(world) {
     this.world = world;
+  }
+
+  // Check ground state without moving (for movement decisions)
+  checkGroundState(entity) {
+    if (!entity || !this.world) return false;
+    
+    // Initialize if needed
+    if (entity.onGround === undefined) {
+      entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+    }
+    if (entity.wasOnGround === undefined) {
+      entity.wasOnGround = entity.onGround;
+    }
+    
+    // Update ground state
+    const wasOnGround = entity.onGround;
+    entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+    entity.wasOnGround = wasOnGround;
+    
+    // Update coyote time
+    if (wasOnGround && !entity.onGround) {
+      entity.coyoteTime = COYOTE_MS / 1000;
+    }
+    
+    return entity.onGround;
   }
 
   updateEntity(entity, dt = FIXED_DT) {
@@ -27,20 +52,7 @@ export class PhysicsSystem {
         entity.touchingWall = { left: false, right: false };
       }
 
-      // CRITICAL: Check ground state FIRST, before any movement
-      // This ensures onGround is accurate for the current frame
-      const wasOnGround = entity.onGround;
-      entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
-      
-      // Initialize wasOnGround if needed
-      if (entity.wasOnGround === undefined) {
-        entity.wasOnGround = wasOnGround;
-      }
-
-      // Coyote time - check if we just left the ground
-      if (wasOnGround && !entity.onGround) {
-        entity.coyoteTime = COYOTE_MS / 1000;
-      }
+      // Update coyote time
       if (entity.coyoteTime > 0) {
         entity.coyoteTime -= dt;
       }
@@ -53,12 +65,8 @@ export class PhysicsSystem {
         entity.vy = maxFallSpeed;
       }
 
-      // Store old ground state before movement
-      entity.wasOnGround = entity.onGround;
-
-      // Simplified approach: Move and resolve collisions in one pass
-      // Use sub-stepping for accuracy but simpler logic
-      const subSteps = 2; // Reduced to 2 for better performance
+      // Move entity with sub-stepping for accuracy
+      const subSteps = 2;
       const subDt = clampedDt / subSteps;
       
       for (let step = 0; step < subSteps; step++) {
@@ -73,8 +81,6 @@ export class PhysicsSystem {
         // Check collisions at new position
         let finalX = newX;
         let finalY = newY;
-        let hitX = false;
-        let hitY = false;
         
         // Check horizontal collision
         if (moveX !== 0) {
@@ -89,14 +95,12 @@ export class PhysicsSystem {
               finalX = rightTile * this.world.tileSize - (entity.width || 12);
               entity.vx = 0;
               entity.touchingWall.right = true;
-              hitX = true;
               break;
             } else if (moveX < 0 && this.world.isSolid(leftTile, ty)) {
               // Hit left wall
               finalX = (leftTile + 1) * this.world.tileSize;
               entity.vx = 0;
               entity.touchingWall.left = true;
-              hitX = true;
               break;
             }
           }
@@ -115,13 +119,11 @@ export class PhysicsSystem {
               finalY = bottomTile * this.world.tileSize - (entity.height || 14);
               entity.vy = 0;
               entity.onGround = true;
-              hitY = true;
               break;
             } else if (moveY < 0 && this.world.isSolid(tx, topTile)) {
               // Hit ceiling
               finalY = (topTile + 1) * this.world.tileSize;
               entity.vy = 0;
-              hitY = true;
               break;
             }
           }
@@ -131,21 +133,17 @@ export class PhysicsSystem {
         entity.x = finalX;
         entity.y = finalY;
         
-        // Update wall touching state if not already set
-        if (!hitX) {
-          if (this.world.checkTouchingWall) {
-            entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
-            entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
-          } else {
-            entity.touchingWall.left = false;
-            entity.touchingWall.right = false;
-          }
+        // Update wall touching state
+        if (this.world.checkTouchingWall) {
+          entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
+          entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
+        } else {
+          entity.touchingWall.left = false;
+          entity.touchingWall.right = false;
         }
         
-        // Update ground state if not already set by collision
-        if (!hitY && step === subSteps - 1) {
-          entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
-        }
+        // Update ground state
+        entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
         
         // Apply wrapping after each sub-step
         const wrapped = wrapPosition(entity.x, entity.y);
@@ -178,7 +176,7 @@ export class PhysicsSystem {
       entity.vx = 0;
     }
     
-    // Simplified movement: direct acceleration towards target
+    // Direct acceleration towards target
     const acceleration = inAir ? MOVE_ACC * 0.6 : MOVE_ACC;
     const friction = inAir ? MOVE_ACC * 0.25 : MOVE_ACC * 0.85;
     

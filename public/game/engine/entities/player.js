@@ -42,11 +42,11 @@ export class Player {
       if (this.vx === undefined) this.vx = 0;
       if (this.vy === undefined) this.vy = 0;
       
-      // CRITICAL: Update physics FIRST to get accurate ground state
-      // This ensures onGround is set correctly before we use it
-      this.physics.updateEntity(this, dt);
+      // CRITICAL: Check ground state FIRST (without moving)
+      // This ensures onGround is accurate before we use it for movement
+      this.physics.checkGroundState(this);
       
-      // Now use the updated ground state for movement
+      // Use the checked ground state for movement
       const inAir = !this.onGround;
       
       // Horizontal movement - use axisX proportionally for smooth control
@@ -96,7 +96,7 @@ export class Player {
         this.vx *= 0.9;
       }
 
-      // Apply movement (physics already updated, so we have accurate ground state)
+      // Apply movement (ground state already checked)
       this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
 
       // Jumping
@@ -107,8 +107,7 @@ export class Player {
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
       
-      // Apply velocity to position (physics.updateEntity already did this, but we need to apply movement changes)
-      // Actually, we need to call updateEntity again to apply the velocity changes from movement
+      // Apply physics (gravity + movement) - this moves the entity
       this.physics.updateEntity(this, dt);
 
       // Shooting
