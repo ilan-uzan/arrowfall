@@ -42,6 +42,12 @@ export class Player {
       if (this.vx === undefined) this.vx = 0;
       if (this.vy === undefined) this.vy = 0;
       
+      // Update physics FIRST to get current ground state
+      this.physics.updateEntity(this, dt);
+      
+      // Now check ground state for movement
+      const inAir = !this.onGround;
+      
       // Horizontal movement - use axisX for smoother control
       let targetVx = 0;
       if (actions.left || (actions.axisX && actions.axisX < -0.1)) {
@@ -52,8 +58,8 @@ export class Player {
         this.facing = 1;
       }
 
-      // Apply movement BEFORE physics update
-      this.physics.applyHorizontalMovement(this, targetVx, dt, !this.onGround);
+      // Apply movement AFTER physics update (with correct ground state)
+      this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
 
       // Jumping
       if (actions.jump) {
@@ -62,9 +68,6 @@ export class Player {
 
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
-
-      // Update physics (this applies gravity and collision)
-      this.physics.updateEntity(this, dt);
 
       // Shooting
       if (actions.shoot && !this.shootHeld) {

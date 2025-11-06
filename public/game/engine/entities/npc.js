@@ -64,11 +64,11 @@ export class NPC {
     }
 
     try {
-      // Update physics
-      this.physics.updateEntity(this, dt);
-
-      // Update AI behavior
+      // Update AI behavior FIRST to determine movement
       const newArrow = this.updateBehavior(dt, world, player, arrows || []);
+      
+      // Update physics AFTER movement is determined
+      this.physics.updateEntity(this, dt);
       
       return newArrow;
     } catch (error) {
@@ -94,6 +94,9 @@ export class NPC {
       
       // Validate player position
       if (isNaN(player.x) || isNaN(player.y)) return null;
+      
+      // Check ground state for movement (use current state)
+      const inAir = !this.onGround;
 
     // Evade if player is too close (80^2 = 6400)
     if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {
@@ -142,9 +145,9 @@ export class NPC {
         const speed = MAX_VEL_X * 0.7 * (1 + this.wave * 0.04); // Scale with wave
         const targetVx = this.patrolDirection * speed;
         
-        // Apply movement using physics system
+        // Apply movement using physics system with correct air state
         if (this.physics) {
-          this.physics.applyHorizontalMovement(this, targetVx, dt, !this.onGround);
+          this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
         } else {
           this.vx = targetVx;
         }
@@ -168,9 +171,9 @@ export class NPC {
         // Face player
         this.facing = dx > 0 ? 1 : -1;
         
-        // Stop to aim - use physics system
+        // Stop to aim - use physics system with correct air state
         if (this.physics) {
-          this.physics.applyHorizontalMovement(this, 0, dt, !this.onGround);
+          this.physics.applyHorizontalMovement(this, 0, dt, inAir);
         } else {
           this.vx = 0;
         }
@@ -215,9 +218,9 @@ export class NPC {
         // Jump away from player
         const evadeSpeed = this.patrolDirection * MAX_VEL_X * 0.8;
         
-        // Apply movement using physics system
+        // Apply movement using physics system with correct air state
         if (this.physics) {
-          this.physics.applyHorizontalMovement(this, evadeSpeed, dt, !this.onGround);
+          this.physics.applyHorizontalMovement(this, evadeSpeed, dt, inAir);
         } else {
           this.vx = evadeSpeed;
         }
@@ -267,9 +270,9 @@ export class NPC {
         
         const retrieveSpeed = this.facing * MAX_VEL_X * 0.8;
         
-        // Apply movement using physics system
+        // Apply movement using physics system with correct air state
         if (this.physics) {
-          this.physics.applyHorizontalMovement(this, retrieveSpeed, dt, !this.onGround);
+          this.physics.applyHorizontalMovement(this, retrieveSpeed, dt, inAir);
         } else {
           this.vx = retrieveSpeed;
         }

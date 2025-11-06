@@ -48,14 +48,17 @@ export class PhysicsSystem {
       const oldX = entity.x;
       const oldY = entity.y;
       
+      // Store old ground state before movement
+      entity.wasOnGround = entity.onGround;
+      
+      // Apply velocity to position
       entity.x += entity.vx * clampedDt;
       entity.y += entity.vy * clampedDt;
 
-      // Check ground BEFORE collision resolution
-      entity.wasOnGround = entity.onGround;
+      // Check ground AFTER position update but BEFORE collision resolution
       entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
 
-      // Check walls BEFORE collision resolution
+      // Check walls AFTER position update but BEFORE collision resolution
       if (this.world.checkTouchingWall) {
         entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
         entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
@@ -106,16 +109,17 @@ export class PhysicsSystem {
       if (Math.abs(targetVx) > 0.1) {
         entity.vx = this.approach(entity.vx, targetVx, MOVE_ACC * dt * 0.65);
       } else {
-        // Air friction
+        // Air friction (lighter)
         entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 0.3);
       }
     } else {
-      // Ground movement
+      // Ground movement - more responsive
       if (Math.abs(targetVx) > 0.1) {
+        // Accelerate towards target velocity
         entity.vx = this.approach(entity.vx, targetVx, MOVE_ACC * dt);
       } else {
-        // Ground friction (stronger)
-        entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 1.2);
+        // Ground friction (stop quickly when no input)
+        entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 0.8);
       }
     }
     
