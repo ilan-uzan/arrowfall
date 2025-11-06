@@ -130,15 +130,18 @@ export class ArenaScene {
   }
 
   updateGame(dt) {
-    // Update players
-    this.players.forEach(player => {
-      if (!player.dead) {
-        const actions = this.game.inputRouter.getActions(player.id);
-        if (actions) {
-          player.update(dt, this.level, actions);
+      // Update players
+      this.players.forEach(player => {
+        if (!player.dead) {
+          const actions = this.game.inputRouter.getActions(player.id);
+          if (actions) {
+            player.update(dt, this.level, actions);
+          } else {
+            // Controller disconnected - mark as dead
+            player.die();
+          }
         }
-      }
-    });
+      });
 
     // Update arrows
     this.arrows.forEach(arrow => {
@@ -293,7 +296,11 @@ export class ArenaScene {
     if (!player || player.dead) return;
 
     // Shooting handled in player.update()
-    // Pause handled globally (ESC pauses game)
+    // Pause handled globally (Start/Options pauses game)
+    if (actions.pausePressed) {
+      // TODO: Implement pause menu
+      this.game.audio.playConfirm();
+    }
   }
 
   render(ctx) {
@@ -378,14 +385,22 @@ export class ArenaScene {
       }
     });
 
-    // Round info (center top)
-    if (this.state === 'playing') {
-      const alivePlayers = this.players.filter(p => !p.dead).length;
-      ctx.fillStyle = alivePlayers > 1 ? PALETTE.accent : PALETTE.accent2;
-      ctx.font = '10px monospace';
-      ctx.textAlign = 'center';
-      ctx.fillText(`Round ${Object.values(this.roundWins).reduce((a, b) => a + b, 0) + 1}`, w / 2, 18);
-    }
+        // Round info (center top)
+        if (this.state === 'playing') {
+          const alivePlayers = this.players.filter(p => !p.dead).length;
+          ctx.fillStyle = alivePlayers > 1 ? PALETTE.accent : PALETTE.accent2;
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          const roundNum = Object.values(this.roundWins).reduce((a, b) => a + b, 0) + 1;
+          ctx.fillText(`Round ${roundNum}`, w / 2, 18);
+          
+          // Show controller status
+          if (alivePlayers === 0) {
+            ctx.fillStyle = PALETTE.accent2;
+            ctx.font = '10px monospace';
+            ctx.fillText('Controller disconnected!', w / 2, 32);
+          }
+        }
   }
 }
 

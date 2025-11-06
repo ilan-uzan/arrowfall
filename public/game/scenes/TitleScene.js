@@ -29,6 +29,16 @@ export class TitleScene {
 
   handleInput(actions, playerId) {
     if (!actions) return;
+    
+    // Check controller connection for Play button
+    if (this.selectedButton === 0 && (actions.jumpPressed || actions.shootPressed)) {
+      this.game.inputRouter.updateGamepads();
+      if (this.game.inputRouter.gamepads.length < 2) {
+        // Not enough controllers - show error (handled in render)
+        this.game.audio.playConfirm(); // Play error sound
+        return;
+      }
+    }
 
     if (actions.jumpPressed || actions.shootPressed) {
       if (this.selectedButton === 0) {
@@ -36,6 +46,12 @@ export class TitleScene {
         this.game.sceneManager.setScene(SCENES.CHARACTER_SELECT);
       } else if (this.selectedButton === 1) {
         // Survival Mode - single player with NPCs
+        this.game.inputRouter.updateGamepads();
+        if (this.game.inputRouter.gamepads.length < 1) {
+          // Not enough controllers
+          this.game.audio.playConfirm();
+          return;
+        }
         this.game.mode = 'single-player';
         this.game.sceneManager.setScene(SCENES.SURVIVAL);
       } else if (this.selectedButton === 2) {
@@ -77,10 +93,20 @@ export class TitleScene {
     ctx.textBaseline = 'middle';
     ctx.fillText('ARROWFALL', w / 2, h / 3 - 20);
 
-    // Subtitle
-    ctx.fillStyle = PALETTE.sub;
+    // Check controller status
+    this.game.inputRouter.updateGamepads();
+    const connectedCount = this.game.inputRouter.gamepads.length;
+    
+    // Subtitle with controller count
+    ctx.fillStyle = connectedCount > 0 ? PALETTE.accent : PALETTE.accent2;
     ctx.font = '10px monospace';
-    ctx.fillText('Left Stick / D-Pad: Navigate | A/Cross: Select', w / 2, h / 3 + 10);
+    ctx.fillText(`Controllers: ${connectedCount} | Left Stick / D-Pad: Navigate | A/Cross: Select`, w / 2, h / 3 + 10);
+    
+    if (connectedCount === 0) {
+      ctx.fillStyle = PALETTE.accent2;
+      ctx.font = '10px monospace';
+      ctx.fillText('Connect a PS5 controller to continue', w / 2, h / 3 + 22);
+    }
 
     // Buttons
     const buttonY = h / 2;

@@ -12,6 +12,12 @@ export class CharacterSelectScene {
   enter() {
     this.players = [];
     this.readyCount = 0;
+    this.minPlayers = 2;
+    this.maxPlayers = 4;
+    
+    // Clear all bindings to start fresh
+    this.game.inputRouter.playerBindings = {};
+    this.game.inputRouter.updateGamepads();
   }
 
   exit() {
@@ -20,7 +26,7 @@ export class CharacterSelectScene {
   }
 
   update(dt) {
-    // Check for gamepad join
+    // Check for gamepad join (A/Cross button)
     const gamepadIndex = this.game.inputRouter.checkJoinButton();
     if (gamepadIndex >= 0) {
       const playerId = this.players.length + 1;
@@ -36,8 +42,18 @@ export class CharacterSelectScene {
         }
       }
     }
-
-    // Players must join via gamepad
+    
+    // Check for players leaving (if they press Start/Options while in slot)
+    for (let i = this.players.length - 1; i >= 0; i--) {
+      const player = this.players[i];
+      const actions = this.game.inputRouter.getActions(player.id);
+      if (actions && actions.pausePressed && !player.ready) {
+        // Player wants to leave
+        this.game.inputRouter.unbindPlayer(player.id);
+        this.players.splice(i, 1);
+        this.game.audio.playConfirm();
+      }
+    }
   }
 
   handleInput(actions, playerId) {
@@ -49,7 +65,13 @@ export class CharacterSelectScene {
       this.game.audio.playConfirm();
       
       this.readyCount = this.players.filter(p => p.ready).length;
-      if (this.readyCount >= 2 && this.readyCount === this.players.length) {
+      
+      // Check if all players are ready and we have minimum players
+      const allReady = this.players.length >= this.minPlayers && 
+                       this.players.every(p => p.ready) && 
+                       this.players.length === this.readyCount;
+      
+      if (allReady) {
         // All ready, start game - setup players first
         this.game.setupPlayers(this.players);
         setTimeout(() => {
@@ -83,10 +105,15 @@ export class CharacterSelectScene {
     ctx.fillText('CHARACTER SELECT', w / 2, 30);
 
     // Instructions
+    this.game.inputRouter.updateGamepads();
+    const availableCount = this.game.inputRouter.gamepads.length - this.players.length;
+    const connectedCount = this.game.inputRouter.gamepads.length;
+    
     ctx.fillStyle = PALETTE.sub;
     ctx.font = '10px monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Press A/Cross on gamepad to join | Press Jump when ready', w / 2, 50);
+    ctx.fillText(`Players: ${this.players.length}/${this.maxPlayers} | Controllers: ${connectedCount}`, w / 2, 48);
+    ctx.fillText('Press A/Cross to join | Press Jump when ready | Start to leave', w / 2, 60);
 
     // Player slots
     const slotWidth = w / 4;
@@ -127,18 +154,32 @@ export class CharacterSelectScene {
       }
     }
 
-    // Instructions
-    if (this.players.length >= 2) {
+    // Status messages
+    const allReady = this.players.length >= this.minPlayers && 
+                     this.players.every(p => p.ready) && 
+                     this.players.length === this.readyCount;
+    
+    if (allReady) {
+      ctx.fillStyle = PALETTE.accent;
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('All players ready! Press Jump to start!', w / 2, h - 30);
+    } else if (this.players.length >= this.minPlayers) {
       ctx.fillStyle = PALETTE.ink;
       ctx.font = '12px monospace';
-      ctx.fillText('All players ready to start!', w / 2, h - 20);
+      ctx.fillText(`Waiting for all players to be ready... (${this.readyCount}/${this.players.length})`, w / 2, h - 30);
     } else {
       ctx.fillStyle = PALETTE.accent2;
       ctx.font = '12px monospace';
-      ctx.fillText('Need at least 2 PS5 controllers', w / 2, h - 20);
-      ctx.fillStyle = PALETTE.sub;
-      ctx.font = '10px monospace';
-      ctx.fillText('Connect controllers and press A/Cross × to join', w / 2, h - 8);
+      ctx.fillText(`Need at least ${this.minPlayers} players (${this.players.length}/${this.minPlayers})`, w / 2, h - 30);
+      if (connectedCount < this.minPlayers) {
+        ctx.fillStyle = PALETTE.sub;
+        ctx.font = '10px monospace';
+        ctx.fillText(`Connect ${this.minPlayers - connectedCount} more controller(s)`, w / 2, h - 18);
+      } else {
+        ctx.fillStyle = PALETTE.sub;
+        ctx.font = '10px monospace';
+        ctx.fillText('Press A/Cross × on controller to join', w / 2, h - 18);
+      }
     }
   }
 }
