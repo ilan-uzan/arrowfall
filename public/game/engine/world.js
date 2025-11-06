@@ -1,5 +1,6 @@
-// World - Single TowerFall-style Arena
+// World - Single TowerFall-style Arena (Toroidal)
 import { TILE, PALETTE } from './constants.js';
+import { wrapPosition } from './wrap.js';
 
 export class World {
   constructor() {
@@ -67,10 +68,10 @@ export class World {
   }
 
   isSolid(tx, ty) {
-    if (ty < 0 || ty >= this.height || tx < 0 || tx >= this.width) {
-      return true; // Out of bounds is solid
-    }
-    return this.solids[ty]?.[tx] === true;
+    // Wrap tile coordinates for toroidal world
+    const wrappedTx = ((tx % this.width) + this.width) % this.width;
+    const wrappedTy = ((ty % this.height) + this.height) % this.height;
+    return this.solids[wrappedTy]?.[wrappedTx] === true;
   }
 
   checkCollision(x, y, width, height) {
@@ -208,41 +209,24 @@ export class World {
       }
     }
     
-    // Final safety clamp to world bounds
-    const worldWidth = this.width * this.tileSize;
-    const worldHeight = this.height * this.tileSize;
-    if (entity.x < 0) {
-      entity.x = 0;
-      entity.vx = 0;
-    }
-    if (entity.x + width > worldWidth) {
-      entity.x = worldWidth - width;
-      entity.vx = 0;
-    }
-    if (entity.y < 0) {
-      entity.y = 0;
-      entity.vy = 0;
-    }
-    if (entity.y + height > worldHeight) {
-      entity.y = worldHeight - height;
-      entity.vy = 0;
-      if (entity.onGround !== undefined) {
-        entity.onGround = true;
-      }
-    }
+    // Note: Bounds clamping removed - wrapping is handled in physics system
   }
 
-  // Line of sight check (for NPC AI)
+  // Line of sight check (for NPC AI) - handles wrapped coordinates
   hasLineOfSight(x1, y1, x2, y2) {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
+    // Wrap coordinates for toroidal world
+    const wrapped1 = wrapPosition(x1, y1);
+    const wrapped2 = wrapPosition(x2, y2);
+    
+    const dx = wrapped2.x - wrapped1.x;
+    const dy = wrapped2.y - wrapped1.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const steps = Math.ceil(dist / this.tileSize);
     
     for (let i = 0; i <= steps; i++) {
       const t = i / steps;
-      const x = x1 + dx * t;
-      const y = y1 + dy * t;
+      const x = wrapped1.x + dx * t;
+      const y = wrapped1.y + dy * t;
       const { tx, ty } = this.worldToTile(x, y);
       if (this.isSolid(tx, ty)) {
         return false;

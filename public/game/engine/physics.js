@@ -1,5 +1,6 @@
-// Physics System - AABB Collision & Movement
+// Physics System - Fixed Timestep, AABB Collision & Movement
 import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
+import { wrapPosition } from './wrap.js';
 
 export class PhysicsSystem {
   constructor(world) {
@@ -54,14 +55,18 @@ export class PhysicsSystem {
       // Store old ground state before movement
       entity.wasOnGround = entity.onGround;
       
-      // Apply velocity to position
+      // 3. Integrate velocity → tentative new position
       entity.x += entity.vx * clampedDt;
       entity.y += entity.vy * clampedDt;
 
-      // Check ground AFTER position update but BEFORE collision resolution
+      // 4. Apply screen wrapping (toroidal world)
+      const wrapped = wrapPosition(entity.x, entity.y);
+      entity.x = wrapped.x;
+      entity.y = wrapped.y;
+
+      // 5. Check ground/walls AFTER position update but BEFORE collision resolution
       entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
 
-      // Check walls AFTER position update but BEFORE collision resolution
       if (this.world.checkTouchingWall) {
         entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
         entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
@@ -70,32 +75,15 @@ export class PhysicsSystem {
         entity.touchingWall.right = false;
       }
 
-      // Resolve collisions (this will fix any position issues)
+      // 6. Resolve collisions (one axis at a time to avoid tunneling)
       if (this.world.resolveCollision) {
         this.world.resolveCollision(entity);
       }
       
-      // Final clamp to world bounds (safety net)
-      if (this.world.width && this.world.tileSize) {
-        const worldWidth = this.world.width * this.tileSize;
-        const worldHeight = this.world.height * this.tileSize;
-        if (entity.x < 0) {
-          entity.x = 0;
-          entity.vx = 0;
-        }
-        if (entity.x + (entity.width || 12) > worldWidth) {
-          entity.x = worldWidth - (entity.width || 12);
-          entity.vx = 0;
-        }
-        if (entity.y < 0) {
-          entity.y = 0;
-          entity.vy = 0;
-        }
-        if (entity.y + (entity.height || 14) > worldHeight) {
-          entity.y = worldHeight - (entity.height || 14);
-          entity.vy = 0;
-        }
-      }
+      // 7. Apply wrapping again if collision pushed object across boundary
+      const wrappedAfterCollision = wrapPosition(entity.x, entity.y);
+      entity.x = wrappedAfterCollision.x;
+      entity.y = wrappedAfterCollision.y;
     } catch (error) {
       console.error('Error in physics updateEntity:', error);
     }

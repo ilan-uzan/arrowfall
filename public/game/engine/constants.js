@@ -34,11 +34,11 @@ export const START_ARROWS = 3;
 export const MAX_ARROWS = 5;
 
 // Input Constants
-export const DEADZONE = 0.25; // Increased for less sensitivity
+export const DEADZONE = 0.15; // Standard deadzone for smooth control
 
 // Game Rules
 export const WINS_TO_VICTORY = 3;          // best-of-5 (first to 3)
-export const FIXED_DT = 1 / 60;            // Fixed timestep (60 FPS)
+export const FIXED_DT = 1 / 120;           // Fixed timestep (120 FPS for smooth physics)
 
 // Player Colors
 export const PLAYER_COLORS = [

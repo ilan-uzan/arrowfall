@@ -34,7 +34,7 @@ export class Player {
 
     // Validate dt
     if (!dt || dt <= 0 || dt > 0.1) {
-      dt = 1/60; // Default to 60 FPS if invalid
+      dt = 1/120; // Default to fixed timestep if invalid
     }
 
     try {
@@ -144,32 +144,35 @@ export class Player {
     return this.vy > 220;
   }
 
-  render(ctx) {
+  render(ctx, offsetX = 0, offsetY = 0) {
     if (this.dead) {
       ctx.globalAlpha = 0.5;
     }
 
+    const renderX = this.x + offsetX;
+    const renderY = this.y + offsetY;
+
     // Draw player body
     ctx.fillStyle = this.color;
-    ctx.fillRect(this.x, this.y, this.width, this.height);
+    ctx.fillRect(renderX, renderY, this.width, this.height);
     
     // Draw outline
     ctx.strokeStyle = PALETTE.ink;
     ctx.globalAlpha = 0.6;
     ctx.lineWidth = 1;
-    ctx.strokeRect(this.x, this.y, this.width, this.height);
+    ctx.strokeRect(renderX, renderY, this.width, this.height);
     ctx.globalAlpha = 1.0;
     
     // Draw simple face/eyes
     ctx.fillStyle = PALETTE.ink;
-    const eyeY = this.y + 6;
-    ctx.fillRect(this.x + 3, eyeY, 2, 2); // Left eye
-    ctx.fillRect(this.x + 7, eyeY, 2, 2); // Right eye
+    const eyeY = renderY + 6;
+    ctx.fillRect(renderX + 3, eyeY, 2, 2); // Left eye
+    ctx.fillRect(renderX + 7, eyeY, 2, 2); // Right eye
 
     // Draw arrow indicator
     if (this.arrows > 0) {
       ctx.fillStyle = PALETTE.accent3;
-      ctx.fillRect(this.x + this.width / 2 - 1, this.y - 4, 2, 3);
+      ctx.fillRect(renderX + this.width / 2 - 1, renderY - 4, 2, 3);
     }
 
     ctx.globalAlpha = 1.0;

@@ -1,5 +1,6 @@
 // Arrow Entity
 import { PALETTE } from '../constants.js';
+import { wrapPosition } from '../wrap.js';
 
 export class Arrow {
   constructor(x, y, vx, vy, ownerId) {
@@ -20,21 +21,26 @@ export class Arrow {
 
     // Validate dt
     if (!dt || dt <= 0 || dt > 0.1) {
-      dt = 1/60;
+      dt = 1/120; // Use fixed timestep
     }
 
     try {
-      // Apply gravity
+      // 1. Apply gravity
       const arrowGravity = 280;
       this.vy += arrowGravity * dt;
 
-      // Update position
+      // 2. Integrate velocity → tentative new position
       const oldX = this.x;
       const oldY = this.y;
       this.x += this.vx * dt;
       this.y += this.vy * dt;
 
-      // Add to trail
+      // 3. Apply screen wrapping (toroidal world)
+      const wrapped = wrapPosition(this.x, this.y);
+      this.x = wrapped.x;
+      this.y = wrapped.y;
+
+      // Add to trail (use wrapped position)
       if (!this.trail) {
         this.trail = [];
       }
@@ -43,7 +49,7 @@ export class Arrow {
         this.trail.shift();
       }
 
-      // Check collision with world
+      // 4. Check collision with world (after wrapping)
       if (world.checkCollision && world.checkCollision(this.x, this.y, this.width, this.height)) {
         // Embed in wall/floor
         this.embedded = true;
@@ -54,15 +60,10 @@ export class Arrow {
           this.x = Math.floor(this.x / world.tileSize) * world.tileSize;
           this.y = Math.floor(this.y / world.tileSize) * world.tileSize;
         }
-      }
-
-      // Check bounds
-      if (world.width && world.tileSize) {
-        const worldWidth = world.width * world.tileSize;
-        const worldHeight = world.height * world.tileSize;
-        if (this.x < 0 || this.x > worldWidth || this.y < 0 || this.y > worldHeight) {
-          this.active = false;
-        }
+        // Wrap again after embedding
+        const wrappedEmbedded = wrapPosition(this.x, this.y);
+        this.x = wrappedEmbedded.x;
+        this.y = wrappedEmbedded.y;
       }
     } catch (error) {
       console.error('Error updating arrow:', error);
@@ -84,27 +85,30 @@ export class Arrow {
     };
   }
 
-  render(ctx) {
+  render(ctx, offsetX = 0, offsetY = 0) {
     if (!this.active) return;
+
+    const renderX = this.x + offsetX;
+    const renderY = this.y + offsetY;
 
     if (this.embedded) {
       // Draw as pickup item (pulsing)
       ctx.fillStyle = PALETTE.arrow;
       ctx.globalAlpha = 0.8;
-      ctx.fillRect(this.x, this.y, this.width, this.height);
+      ctx.fillRect(renderX, renderY, this.width, this.height);
       ctx.globalAlpha = 1.0;
     } else {
       // Draw arrow with trail
       ctx.strokeStyle = PALETTE.arrow;
       ctx.lineWidth = 1;
       
-      // Draw trail
+      // Draw trail (with offset)
       if (this.trail.length > 1) {
         ctx.globalAlpha = 0.3;
         ctx.beginPath();
-        ctx.moveTo(this.trail[0].x + this.width / 2, this.trail[0].y + this.height / 2);
+        ctx.moveTo(this.trail[0].x + offsetX + this.width / 2, this.trail[0].y + offsetY + this.height / 2);
         for (let i = 1; i < this.trail.length; i++) {
-          ctx.lineTo(this.trail[i].x + this.width / 2, this.trail[i].y + this.height / 2);
+          ctx.lineTo(this.trail[i].x + offsetX + this.width / 2, this.trail[i].y + offsetY + this.height / 2);
         }
         ctx.stroke();
         ctx.globalAlpha = 1.0;
@@ -112,12 +116,12 @@ export class Arrow {
       
       // Draw arrow
       ctx.fillStyle = PALETTE.arrow;
-      ctx.fillRect(this.x, this.y, this.width, this.height);
+      ctx.fillRect(renderX, renderY, this.width, this.height);
       
       // Draw direction indicator
       const angle = Math.atan2(this.vy, this.vx);
       ctx.save();
-      ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+      ctx.translate(renderX + this.width / 2, renderY + this.height / 2);
       ctx.rotate(angle);
       ctx.fillStyle = PALETTE.accent;
       ctx.fillRect(2, -1, 2, 2);

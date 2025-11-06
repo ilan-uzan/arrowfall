@@ -140,10 +140,10 @@ class Game {
   }
 
   update(dt) {
-    // Validate dt
-    if (!dt || dt <= 0 || dt > 0.1) {
-      dt = 1/60; // Default to 60 FPS if invalid
-    }
+      // Validate dt (should always be FIXED_DT from game loop)
+      if (!dt || dt <= 0 || dt > 0.1) {
+        dt = 1/120; // Default to fixed timestep if invalid
+      }
 
     try {
       // Update input
