@@ -17,12 +17,16 @@ export class ResultsScene {
     if (arena && arena.roundWins) {
       const entries = Object.entries(arena.roundWins);
       if (entries.length > 0) {
-        const winnerId = entries.reduce((a, b) => {
+        const winnerEntry = entries.reduce((a, b) => {
           const winsA = arena.roundWins[a[0]] || 0;
           const winsB = arena.roundWins[b[0]] || 0;
           return winsA > winsB ? a : b;
-        })[0];
-        this.winner = parseInt(winnerId);
+        });
+        if (winnerEntry) {
+          this.winner = parseInt(winnerEntry[0]);
+        } else {
+          this.winner = null;
+        }
       } else {
         this.winner = null;
       }
@@ -32,6 +36,12 @@ export class ResultsScene {
     this.selectedButton = 0;
     this.animationTime = 0;
     this.particles = [];
+    
+    // Auto-bind first gamepad for menu navigation
+    this.game.inputRouter.updateGamepads();
+    if (this.game.inputRouter.gamepads.length > 0 && !this.game.inputRouter.playerBindings[1]) {
+      this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+    }
     
     // Create confetti particles
     this.createConfetti();
@@ -90,11 +100,11 @@ export class ResultsScene {
       this.game.audio.playConfirm();
     }
 
-    if (actions.left) {
+    if (actions.left || actions.up) {
       this.selectedButton = Math.max(0, this.selectedButton - 1);
       this.game.audio.playConfirm();
     }
-    if (actions.right) {
+    if (actions.right || actions.down) {
       this.selectedButton = Math.min(this.buttons.length - 1, this.selectedButton + 1);
       this.game.audio.playConfirm();
     }

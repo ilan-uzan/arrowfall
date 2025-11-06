@@ -17,6 +17,7 @@ export class CharacterSelectScene {
     
     // Clear all bindings to start fresh
     this.game.inputRouter.playerBindings = {};
+    this.game.inputRouter.lastButtonStates = {}; // Reset button states
     this.game.inputRouter.updateGamepads();
   }
 

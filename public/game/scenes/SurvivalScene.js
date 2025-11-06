@@ -69,6 +69,10 @@ export class SurvivalScene {
   }
 
   enter() {
+    // Clear bindings and reset button states
+    this.game.inputRouter.playerBindings = {};
+    this.game.inputRouter.lastButtonStates = {};
+    
     // Auto-bind first gamepad for survival mode
     this.game.inputRouter.updateGamepads();
     if (this.game.inputRouter.gamepads.length > 0) {
@@ -304,6 +308,14 @@ export class SurvivalScene {
   }
 
   handleInput(actions, playerId) {
+    if (!actions) return;
+    
+    // Handle game over state
+    if (this.state === 'gameOver' && (actions.jumpPressed || actions.shootPressed)) {
+      this.game.sceneManager.setScene(SCENES.TITLE);
+      this.game.audio.playConfirm();
+    }
+    
     if (this.state !== 'playing') return;
     // Player input handled in updateGame
   }

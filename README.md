@@ -29,20 +29,17 @@ npm run dev
 # Open http://localhost:3000
 ```
 
-## 🎯 Controls
+## 🎯 Controls (PS5 Controller Only)
 
-### Player 1 (Keyboard)
-- **A/D** or **←/→** - Move
-- **W** or **Space** - Jump
-- **S** or **F** - Shoot
-
-### Player 2+ (Keyboard/Gamepad)
-- **Arrow Keys** - Move/Jump/Shoot (fallback)
-- **Gamepad**: Left Stick to move, A/Cross to jump, X/Square to shoot
+### PS5 DualSense Controller
+- **Left Stick** or **D-Pad** - Move
+- **Cross (X)** - Jump
+- **Square** or **R2** - Shoot
+- **Options** - Pause / Join Game
 
 ### Menu Navigation
-- **Arrow Keys** - Navigate
-- **Space/W** or **A/Cross** - Select
+- **Left Stick** or **D-Pad** - Navigate
+- **Cross (X)** - Select
 
 ## 📁 Project Structure
 

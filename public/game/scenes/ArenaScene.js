@@ -67,13 +67,16 @@ export class ArenaScene {
   }
 
   enter() {
+    // Reset button states for clean input
+    this.game.inputRouter.lastButtonStates = {};
+    
     // Setup players from character select
     if (this.game.players && this.game.players.length > 0) {
       this.players = this.game.players.map((config) => {
         const spawnKey = `p${config.id}`;
         const spawn = this.level.spawns[spawnKey] || this.level.spawns.p1 || [32, 128];
         const player = new Player(spawn[0], spawn[1], config.id, config.color, this.game);
-        // Ensure player is bound to gamepad
+        // Player bindings are already set from character select
         return player;
       });
     } else {
@@ -85,6 +88,7 @@ export class ArenaScene {
           new Player(288, 128, 2, PLAYER_COLORS[1], this.game)
         ];
         // Bind to first two gamepads
+        this.game.inputRouter.playerBindings = {};
         this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
         this.game.inputRouter.tryBindGamepad(2, this.game.inputRouter.gamepads[1].index);
       } else {
@@ -130,18 +134,18 @@ export class ArenaScene {
   }
 
   updateGame(dt) {
-      // Update players
-      this.players.forEach(player => {
-        if (!player.dead) {
-          const actions = this.game.inputRouter.getActions(player.id);
-          if (actions) {
-            player.update(dt, this.level, actions);
-          } else {
-            // Controller disconnected - mark as dead
-            player.die();
-          }
+    // Update players
+    this.players.forEach(player => {
+      if (!player.dead) {
+        const actions = this.game.inputRouter.getActions(player.id);
+        if (actions) {
+          player.update(dt, this.level, actions);
+        } else {
+          // Controller disconnected - mark as dead
+          player.die();
         }
-      });
+      }
+    });
 
     // Update arrows
     this.arrows.forEach(arrow => {
@@ -296,9 +300,9 @@ export class ArenaScene {
     if (!player || player.dead) return;
 
     // Shooting handled in player.update()
-    // Pause handled globally (Start/Options pauses game)
+    // Pause handled globally (Options/Start pauses game)
     if (actions.pausePressed) {
-      // TODO: Implement pause menu
+      // Pause menu (future feature)
       this.game.audio.playConfirm();
     }
   }

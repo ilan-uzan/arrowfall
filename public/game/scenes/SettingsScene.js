@@ -7,11 +7,10 @@ export class SettingsScene {
   constructor(game) {
     this.game = game;
     this.selectedButton = 0;
-    this.buttons = ['Back', 'Controls Help'];
+    this.buttons = ['Back'];
     this.selectedTab = 0;
-    this.tabs = ['Controllers', 'Keyboard', 'Gamepad'];
+    this.tabs = ['Controllers', 'Gamepad'];
     this.animationTime = 0;
-    this.gamepads = [];
     this.connectedGamepads = [];
   }
 
@@ -19,8 +18,11 @@ export class SettingsScene {
     this.selectedButton = 0;
     this.selectedTab = 0;
     this.animationTime = 0;
-    // Auto-bind player 1 to keyboard for menu navigation
-    this.game.inputRouter.bindKeyboard(1);
+    // Auto-bind first gamepad for menu navigation
+    this.game.inputRouter.updateGamepads();
+    if (this.game.inputRouter.gamepads.length > 0 && !this.game.inputRouter.playerBindings[1]) {
+      this.game.inputRouter.tryBindGamepad(1, this.game.inputRouter.gamepads[0].index);
+    }
     this.updateGamepads();
   }
 
@@ -34,8 +36,8 @@ export class SettingsScene {
   }
 
   updateGamepads() {
-    const pads = navigator.getGamepads();
-    this.connectedGamepads = Array.from(pads).filter(p => p !== null);
+    this.game.inputRouter.updateGamepads();
+    this.connectedGamepads = this.game.inputRouter.gamepads;
   }
 
   handleInput(actions, playerId) {
@@ -45,9 +47,6 @@ export class SettingsScene {
       if (this.selectedButton === 0) {
         // Back
         this.game.sceneManager.setScene(SCENES.TITLE);
-        this.game.audio.playConfirm();
-      } else if (this.selectedButton === 1) {
-        // Controls help is shown in tabs
         this.game.audio.playConfirm();
       }
     }
@@ -65,21 +64,15 @@ export class SettingsScene {
       }
     }
     
-    // Tab navigation with up/down (only if not on button)
+    // Tab navigation with up/down
     if (actions.up) {
-      if (this.selectedButton > 0) {
-        this.selectedButton--;
-        this.game.audio.playConfirm();
-      } else if (this.selectedTab > 0) {
+      if (this.selectedTab > 0) {
         this.selectedTab--;
         this.game.audio.playConfirm();
       }
     }
     if (actions.down) {
-      if (this.selectedButton < this.buttons.length - 1) {
-        this.selectedButton++;
-        this.game.audio.playConfirm();
-      } else if (this.selectedTab < this.tabs.length - 1) {
+      if (this.selectedTab < this.tabs.length - 1) {
         this.selectedTab++;
         this.game.audio.playConfirm();
       }
