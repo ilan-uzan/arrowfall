@@ -50,13 +50,17 @@ export class World {
   }
 
   createSpawnPoints() {
+    // Spawn positions: entity's top-left corner
+    // Platform at tile 8 (y=128) - entity height 14, so spawn at y=128-14=114
+    // Platform at tile 2 (y=32) - entity height 14, so spawn at y=32-14=18
+    // Bottom wall at tile 10 (y=160) - entity height 14, so spawn at y=160-14=146
     return {
-      p1: { x: 32, y: 128 },      // Left platform
-      p2: { x: 288, y: 128 },     // Right platform
-      p3: { x: 160, y: 48 },      // Top center
-      p4: { x: 160, y: 144 },     // Bottom center
-      npc1: { x: 96, y: 128 },    // NPC spawn 1
-      npc2: { x: 224, y: 128 }    // NPC spawn 2
+      p1: { x: 32, y: 114 },      // Left platform (tile 8, feet on platform)
+      p2: { x: 288, y: 114 },     // Right platform (tile 8, feet on platform)
+      p3: { x: 160, y: 18 },      // Top center (tile 2, feet on platform)
+      p4: { x: 160, y: 146 },     // Bottom center (tile 10, feet on bottom wall)
+      npc1: { x: 96, y: 114 },    // NPC spawn 1 (tile 8, feet on platform)
+      npc2: { x: 224, y: 114 }    // NPC spawn 2 (tile 8, feet on platform)
     };
   }
 

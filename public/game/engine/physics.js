@@ -99,18 +99,23 @@ export class PhysicsSystem {
         }
       }
 
-      // Final ground check - snap to ground if very close
-      if (!entity.onGround && entity.vy === 0) {
-        const groundCheck = this.isOnGround(entity);
-        if (groundCheck) {
-          entity.onGround = true;
-          // Snap to ground if within 2 pixels
-          const bottomY = entity.y + (entity.height || 14);
-          const tileBelow = Math.floor(bottomY / this.world.tileSize);
-          const groundY = tileBelow * this.world.tileSize;
-          const distance = bottomY - groundY;
-          if (distance > 0 && distance <= 2) {
-            entity.y = groundY - (entity.height || 14);
+      // Final ground check - snap to ground if very close (when not moving)
+      if (!entity.onGround && entity.vy === 0 && Math.abs(entity.vx) < 10) {
+        const bottomY = entity.y + (entity.height || 14);
+        const leftTile = Math.floor(entity.x / this.world.tileSize);
+        const rightTile = Math.floor((entity.x + (entity.width || 12) - 0.1) / this.world.tileSize);
+        const tileBelow = Math.floor(bottomY / this.world.tileSize);
+        
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (this.world.isSolid(tx, tileBelow)) {
+            const groundY = tileBelow * this.world.tileSize;
+            const distance = bottomY - groundY;
+            // Snap to ground if within 5 pixels
+            if (distance > 0 && distance <= 5) {
+              entity.y = groundY - (entity.height || 14);
+              entity.onGround = true;
+              break;
+            }
           }
         }
       }
@@ -162,10 +167,11 @@ export class PhysicsSystem {
 
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.world.isSolid(tx, tileBelow)) {
-        // Check if we're close enough to the ground (within 3 pixels)
+        // Check if we're close enough to the ground (within 4 pixels for tolerance)
         const groundY = tileBelow * this.world.tileSize;
         const distanceToGround = bottomY - groundY;
-        if (distanceToGround >= -3 && distanceToGround <= 3) {
+        // Entity is on ground if bottom is at or slightly above/below ground level
+        if (distanceToGround >= -4 && distanceToGround <= 4) {
           return true;
         }
       }
