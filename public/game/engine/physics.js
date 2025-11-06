@@ -20,7 +20,10 @@ export class PhysicsSystem {
 
     try {
       // Initialize missing properties
-      if (entity.wasOnGround === undefined) entity.wasOnGround = false;
+      if (entity.wasOnGround === undefined) {
+        // First frame - check ground state
+        entity.wasOnGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+      }
       if (entity.onGround === undefined) {
         // Check ground state on first update
         entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
@@ -30,8 +33,11 @@ export class PhysicsSystem {
         entity.touchingWall = { left: false, right: false };
       }
 
-      // Coyote time
-      if (entity.wasOnGround && !entity.onGround) {
+      // Store old ground state BEFORE checking new state
+      const wasOnGroundBefore = entity.onGround;
+
+      // Coyote time - check if we just left the ground
+      if (wasOnGroundBefore && !entity.onGround) {
         entity.coyoteTime = COYOTE_MS / 1000;
       }
       if (entity.coyoteTime > 0) {
@@ -65,7 +71,14 @@ export class PhysicsSystem {
       entity.y = wrapped.y;
 
       // 5. Check ground/walls AFTER position update but BEFORE collision resolution
+      // This ensures onGround is accurate for the next frame
+      const wasOnGround = entity.onGround;
       entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+      
+      // Update wasOnGround for coyote time
+      if (entity.wasOnGround === undefined) {
+        entity.wasOnGround = wasOnGround;
+      }
 
       if (this.world.checkTouchingWall) {
         entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');

@@ -76,23 +76,36 @@ export class CollisionSystem {
     return this.checkAABB(arrow, player);
   }
 
-  // Check if player stomps another player
+  // Check if player stomps another player or NPC
+  // Stomp requires: player falling fast (vy > threshold) AND player's feet above target's head
   checkStomp(player, target, stompSpeed = 220) {
     if (!player || !target) return false;
-    if (target.dead || (player.vy || 0) <= stompSpeed) return false;
+    if (target.dead || player.dead) return false;
     
+    // Player must be falling fast (downward velocity)
+    const playerVy = player.vy || 0;
+    if (playerVy <= stompSpeed) return false;
+    
+    // Player must be above target (player's bottom > target's top)
+    const playerBottom = (player.y || 0) + (player.height || 0);
+    const targetTop = target.y || 0;
+    
+    // Player's feet must be above target's head (stomping from above)
+    if (playerBottom > targetTop + 8) return false; // Too far down, not stomping
+    
+    // Check if player's feet overlap with target's head area
     const playerFeet = {
       x: player.x || 0,
-      y: (player.y || 0) + ((player.height || 0) - 4),
+      y: (player.y || 0) + ((player.height || 0) - 6), // Bottom 6px of player
       width: player.width || 0,
-      height: 4
+      height: 6
     };
     
     const targetHead = {
       x: target.x || 0,
       y: target.y || 0,
       width: target.width || 0,
-      height: 4
+      height: 8 // Top 8px of target
     };
     
     return this.checkAABB(playerFeet, targetHead);

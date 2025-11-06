@@ -113,6 +113,23 @@ export class VersusScene {
           // Gamepad disconnected - mark player as dead after a short delay
           // This prevents instant death on temporary disconnects
         }
+        
+        // Check for stomp collisions with other players
+        for (const target of this.players) {
+          if (!target || target.dead || target.id === player.id) continue;
+          try {
+            if (this.collisions.checkStomp(player, target)) {
+              // Player stomped target
+              target.die();
+              this.game.fx.createDeathParticles(target.x, target.y, target.color);
+              this.game.fx.triggerScreenShake(4, 0.1);
+              // Bounce player up slightly after stomp
+              player.vy = -200;
+            }
+          } catch (error) {
+            console.error('Error checking stomp collision:', error);
+          }
+        }
       } catch (error) {
         console.error(`Error updating player ${player.id}:`, error);
       }

@@ -120,6 +120,23 @@ export class SurvivalScene {
         if (newArrow) {
           this.arrows.push(newArrow);
         }
+        
+        // Check for stomp collisions with NPCs
+        for (const npc of this.npcs) {
+          if (!npc || npc.dead) continue;
+          try {
+            if (this.game.collisions.checkStomp(this.player, npc)) {
+              // Player stomped NPC
+              npc.die();
+              this.game.fx.createDeathParticles(npc.x, npc.y, npc.color);
+              this.game.fx.triggerScreenShake(4, 0.1);
+              // Bounce player up slightly after stomp
+              this.player.vy = -200;
+            }
+          } catch (error) {
+            console.error('Error checking stomp collision:', error);
+          }
+        }
       }
       
       // Update NPCs with error handling

@@ -42,7 +42,14 @@ export class Player {
       if (this.vx === undefined) this.vx = 0;
       if (this.vy === undefined) this.vy = 0;
       
-      // Use current ground state (from previous frame) for movement
+      // Check ground state BEFORE movement to ensure accurate inAir calculation
+      // This is important because onGround might not be set correctly initially
+      if (this.onGround === undefined) {
+        // First frame - check ground state
+        this.onGround = world.checkOnGround ? world.checkOnGround(this) : false;
+      }
+      
+      // Use current ground state for movement
       const inAir = !this.onGround;
       
       // Horizontal movement - use axisX proportionally for smooth control
