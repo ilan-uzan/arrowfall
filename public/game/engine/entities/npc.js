@@ -140,7 +140,15 @@ export class NPC {
       case NPC_STATE.PATROL:
         // Simple patrol: move back and forth
         const speed = MAX_VEL_X * 0.7 * (1 + this.wave * 0.04); // Scale with wave
-        this.vx = this.patrolDirection * speed;
+        const targetVx = this.patrolDirection * speed;
+        
+        // Apply movement using physics system
+        if (this.physics) {
+          this.physics.applyHorizontalMovement(this, targetVx, dt, !this.onGround);
+        } else {
+          this.vx = targetVx;
+        }
+        
         this.facing = this.patrolDirection;
         
         // Change direction at walls or after time
@@ -242,7 +250,15 @@ export class NPC {
         const targetDx = this.targetX - this.x;
         const targetDy = this.targetY - this.y;
         this.facing = targetDx > 0 ? 1 : -1;
-        this.vx = this.facing * MAX_VEL_X * 0.8;
+        
+        const retrieveSpeed = this.facing * MAX_VEL_X * 0.8;
+        
+        // Apply movement using physics system
+        if (this.physics) {
+          this.physics.applyHorizontalMovement(this, retrieveSpeed, dt, !this.onGround);
+        } else {
+          this.vx = retrieveSpeed;
+        }
         
         // Jump if needed to reach arrow
         if (this.onGround && targetDy < -20 && this.stateTimer > 0.2) {

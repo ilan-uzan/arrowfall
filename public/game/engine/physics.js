@@ -45,14 +45,17 @@ export class PhysicsSystem {
 
       // Update position (use clamped dt)
       if (entity.vx === undefined) entity.vx = 0;
+      const oldX = entity.x;
+      const oldY = entity.y;
+      
       entity.x += entity.vx * clampedDt;
       entity.y += entity.vy * clampedDt;
 
-      // Check ground
+      // Check ground BEFORE collision resolution
       entity.wasOnGround = entity.onGround;
       entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
 
-      // Check walls
+      // Check walls BEFORE collision resolution
       if (this.world.checkTouchingWall) {
         entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
         entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
@@ -61,22 +64,30 @@ export class PhysicsSystem {
         entity.touchingWall.right = false;
       }
 
-      // Resolve collisions
+      // Resolve collisions (this will fix any position issues)
       if (this.world.resolveCollision) {
         this.world.resolveCollision(entity);
       }
-
-      // Clamp to world bounds
+      
+      // Final clamp to world bounds (safety net)
       if (this.world.width && this.world.tileSize) {
-        const worldWidth = this.world.width * this.world.tileSize;
-        const worldHeight = this.world.height * this.world.tileSize;
-        if (entity.x < 0) entity.x = 0;
-        if (entity.x + (entity.width || 0) > worldWidth) {
-          entity.x = Math.max(0, worldWidth - (entity.width || 0));
+        const worldWidth = this.world.width * this.tileSize;
+        const worldHeight = this.world.height * this.tileSize;
+        if (entity.x < 0) {
+          entity.x = 0;
+          entity.vx = 0;
         }
-        if (entity.y < 0) entity.y = 0;
-        if (entity.y + (entity.height || 0) > worldHeight) {
-          entity.y = Math.max(0, worldHeight - (entity.height || 0));
+        if (entity.x + (entity.width || 12) > worldWidth) {
+          entity.x = worldWidth - (entity.width || 12);
+          entity.vx = 0;
+        }
+        if (entity.y < 0) {
+          entity.y = 0;
+          entity.vy = 0;
+        }
+        if (entity.y + (entity.height || 14) > worldHeight) {
+          entity.y = worldHeight - (entity.height || 14);
+          entity.vy = 0;
         }
       }
     } catch (error) {

@@ -92,8 +92,14 @@ export class World {
   }
 
   checkOnGround(entity) {
-    const { x, y, width } = entity;
-    const bottomY = y + (entity.height || 0);
+    if (!entity) return false;
+    
+    const x = entity.x || 0;
+    const y = entity.y || 0;
+    const width = entity.width || 12;
+    const height = entity.height || 14;
+    
+    const bottomY = y + height;
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
     const tileBelow = Math.floor((bottomY + 1) / this.tileSize);
@@ -107,11 +113,17 @@ export class World {
   }
 
   checkTouchingWall(entity, direction) {
-    const { x, y, width, height } = entity;
+    if (!entity || !direction) return false;
+    
+    const x = entity.x || 0;
+    const y = entity.y || 0;
+    const width = entity.width || 12;
+    const height = entity.height || 14;
+    
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
     const topTile = Math.floor(y / this.tileSize);
-    const bottomTile = Math.floor((y + (height || 0)) / this.tileSize);
+    const bottomTile = Math.floor((y + height) / this.tileSize);
 
     if (direction === 'left') {
       const tileLeft = Math.floor((x - 1) / this.tileSize);
@@ -120,7 +132,7 @@ export class World {
           return true;
         }
       }
-    } else {
+    } else if (direction === 'right') {
       const tileRight = Math.floor((x + width + 1) / this.tileSize);
       for (let ty = topTile; ty <= bottomTile; ty++) {
         if (this.isSolid(tileRight, ty)) {
@@ -136,42 +148,69 @@ export class World {
     
     const x = entity.x || 0;
     const y = entity.y || 0;
-    const width = entity.width || 0;
-    const height = entity.height || 0;
+    const width = entity.width || 12;
+    const height = entity.height || 14;
     
     if (width <= 0 || height <= 0) return;
     
-    const leftTile = Math.floor(Math.max(0, x) / this.tileSize);
+    // Get current tile positions
+    const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
-    const topTile = Math.floor(Math.max(0, y) / this.tileSize);
+    const topTile = Math.floor(y / this.tileSize);
     const bottomTile = Math.floor((y + height) / this.tileSize);
 
-    // Check horizontal collision
+    // Check horizontal collisions FIRST (before vertical)
+    let collidedLeft = false;
+    let collidedRight = false;
+    
     for (let ty = topTile; ty <= bottomTile; ty++) {
       if (this.isSolid(leftTile, ty)) {
-        entity.x = Math.max(0, (leftTile + 1) * this.tileSize);
-        if (entity.vx !== undefined) entity.vx = 0;
+        collidedLeft = true;
+        entity.x = (leftTile + 1) * this.tileSize;
+        if (entity.vx !== undefined && entity.vx < 0) {
+          entity.vx = 0;
+        }
       }
       if (this.isSolid(rightTile, ty)) {
-        entity.x = Math.max(0, rightTile * this.tileSize - width);
-        if (entity.vx !== undefined) entity.vx = 0;
+        collidedRight = true;
+        entity.x = rightTile * this.tileSize - width;
+        if (entity.vx !== undefined && entity.vx > 0) {
+          entity.vx = 0;
+        }
       }
     }
 
-    // Check vertical collision
+    // Check vertical collisions AFTER horizontal
+    let collidedTop = false;
+    let collidedBottom = false;
+    
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.isSolid(tx, topTile)) {
-        entity.y = Math.max(0, (topTile + 1) * this.tileSize);
-        if (entity.vy !== undefined) entity.vy = 0;
+        collidedTop = true;
+        entity.y = (topTile + 1) * this.tileSize;
+        if (entity.vy !== undefined && entity.vy < 0) {
+          entity.vy = 0;
+        }
       }
       if (this.isSolid(tx, bottomTile)) {
-        entity.y = Math.max(0, bottomTile * this.tileSize - height);
-        if (entity.vy !== undefined) entity.vy = 0;
+        collidedBottom = true;
+        entity.y = bottomTile * this.tileSize - height;
+        if (entity.vy !== undefined && entity.vy > 0) {
+          entity.vy = 0;
+        }
         if (entity.onGround !== undefined) {
           entity.onGround = true;
         }
       }
     }
+    
+    // Clamp to world bounds as final safety
+    const worldWidth = this.width * this.tileSize;
+    const worldHeight = this.height * this.tileSize;
+    if (entity.x < 0) entity.x = 0;
+    if (entity.x + width > worldWidth) entity.x = worldWidth - width;
+    if (entity.y < 0) entity.y = 0;
+    if (entity.y + height > worldHeight) entity.y = worldHeight - height;
   }
 
   // Line of sight check (for NPC AI)

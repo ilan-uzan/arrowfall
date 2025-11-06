@@ -10,11 +10,14 @@ export class TitleScene {
   enter() {
     this.animationTime = 0;
     
-    // Auto-bind first connected gamepad for menu navigation
+    // Auto-bind first connected gamepad for menu navigation (only if not already bound)
     this.game.inputRouter.update();
     const gamepads = this.game.inputRouter.getAllGamepads();
-    if (gamepads.length > 0) {
-      this.game.inputRouter.playerBindings.clear();
+    if (gamepads.length > 0 && !this.game.inputRouter.playerBindings.has(1)) {
+      // Only clear if we need to bind
+      if (this.game.inputRouter.playerBindings.size === 0) {
+        this.game.inputRouter.playerBindings.clear();
+      }
       this.game.inputRouter.bindGamepad(1, gamepads[0].index);
     }
   }

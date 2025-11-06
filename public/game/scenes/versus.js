@@ -222,7 +222,8 @@ export class VersusScene {
     
     // Respawn all players
     this.players.forEach(player => {
-      const spawn = this.game.world.spawns[`p${player.id}`];
+      if (!player) return;
+      const spawn = this.game.world?.spawns?.[`p${player.id}`] || { x: 32, y: 128 };
       player.respawn(spawn.x, spawn.y);
     });
   }
@@ -261,18 +262,26 @@ export class VersusScene {
     // Player scores
     let x = 80;
     for (const player of this.players) {
+      if (!player) continue;
       ctx.fillStyle = player.color;
-      ctx.fillText(`P${player.id}: ${this.scores[player.id]}`, x, 5);
+      ctx.fillText(`P${player.id}: ${this.scores[player.id] || 0}`, x, 5);
       x += 50;
     }
     
-    // Countdown
+    // Countdown - show during countdown
     if (this.countdown > 0) {
       ctx.fillStyle = PALETTE.accent;
       ctx.font = 'bold 24px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(this.countdownText, w / 2, h / 2);
+    } else if (this.countdownText === 'GO!' && this.roundActive) {
+      // Show GO! briefly then clear
+      ctx.fillStyle = PALETTE.accent;
+      ctx.font = 'bold 24px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('GO!', w / 2, h / 2);
     }
     
     // Pause hint

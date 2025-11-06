@@ -55,8 +55,9 @@ export class ModeSelectScene {
       }
     }
 
-    // Back to title
+    // Back to title - preserve controller binding
     if (actions.pause) {
+      // Don't clear bindings, just switch scene
       this.game.setScene('title');
     }
   }
