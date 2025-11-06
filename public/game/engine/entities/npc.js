@@ -66,16 +66,13 @@ export class NPC {
     }
 
     try {
-      // CRITICAL: Check ground state FIRST (without moving)
-      this.physics.checkGroundState(this);
-      
-      // Use the checked ground state for movement
+      // Get current ground state for movement decisions
       const inAir = !this.onGround;
       
       // Update AI behavior to determine movement
       const newArrow = this.updateBehavior(dt, world, player, arrows || [], inAir);
       
-      // Apply physics (gravity + movement) - this moves the entity
+      // Apply physics (gravity + collision) - this moves the entity
       this.physics.updateEntity(this, dt);
       
       return newArrow;
