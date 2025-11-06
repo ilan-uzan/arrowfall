@@ -41,10 +41,14 @@ export class TitleScene {
     if (actions.jump || actions.shoot) {
       if (this.selectedButton === 0) {
         // Play - go to mode select
-        this.game.setScene('modeSelect');
+        this.game.setScene('modeSelect').catch(err => {
+          console.error('Failed to switch to modeSelect:', err);
+        });
       } else if (this.selectedButton === 1) {
         // How to Play (future feature - for now just play)
-        this.game.setScene('modeSelect');
+        this.game.setScene('modeSelect').catch(err => {
+          console.error('Failed to switch to modeSelect:', err);
+        });
       } else if (this.selectedButton === 2) {
         // Quit - reload page
         window.location.reload();

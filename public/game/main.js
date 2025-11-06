@@ -43,8 +43,16 @@ class Game {
     // Initialize scenes
     this.initScenes();
     
-    // Start with title screen
-    this.setScene('title');
+    // Start with title screen (already loaded)
+    if (this.scenes.title) {
+      this.currentScene = this.scenes.title;
+      if (this.currentScene && this.currentScene.enter) {
+        this.currentScene.enter();
+      }
+      console.log('Title scene initialized');
+    } else {
+      console.error('Title scene not found!');
+    }
     
     // Start game loop
     this.loop = new GameLoop(
@@ -55,36 +63,79 @@ class Game {
   }
 
   initScenes() {
-    // Import and register all scenes
-    import('./scenes/title.js').then(module => {
-      this.scenes.title = new module.TitleScene(this);
-    });
-    import('./scenes/modeSelect.js').then(module => {
-      this.scenes.modeSelect = new module.ModeSelectScene(this);
-    });
-    import('./scenes/lobby.js').then(module => {
-      this.scenes.lobby = new module.LobbyScene(this);
-    });
-    import('./scenes/versus.js').then(module => {
-      this.scenes.versus = new module.VersusScene(this);
-    });
-    import('./scenes/survival.js').then(module => {
-      this.scenes.survival = new module.SurvivalScene(this);
-    });
-    import('./scenes/results.js').then(module => {
-      this.scenes.results = new module.ResultsScene(this);
-    });
+    // Directly register title scene (already imported)
+    this.scenes.title = new TitleScene(this);
+    
+    // Lazy load other scenes when needed
+    // They will be imported on-demand when switching scenes
   }
 
-  setScene(sceneName) {
+  async setScene(sceneName) {
     if (this.currentScene && this.currentScene.exit) {
       this.currentScene.exit();
+    }
+    
+    // If scene doesn't exist, try to load it
+    if (!this.scenes[sceneName]) {
+      try {
+        await this.loadScene(sceneName);
+      } catch (error) {
+        console.error(`Failed to load scene: ${sceneName}`, error);
+        // Fallback to title scene if scene fails to load
+        sceneName = 'title';
+      }
     }
     
     this.currentScene = this.scenes[sceneName];
     if (this.currentScene && this.currentScene.enter) {
       this.currentScene.enter();
     }
+  }
+
+  async loadScene(sceneName) {
+    // Don't load if already exists
+    if (this.scenes[sceneName]) return;
+    
+    try {
+      if (sceneName === 'modeSelect') {
+        const module = await import('./scenes/modeSelect.js');
+        this.scenes.modeSelect = new module.ModeSelectScene(this);
+      } else if (sceneName === 'lobby') {
+        const module = await import('./scenes/lobby.js');
+        this.scenes.lobby = new module.LobbyScene(this);
+      } else if (sceneName === 'versus') {
+        const module = await import('./scenes/versus.js');
+        this.scenes.versus = new module.VersusScene(this);
+      } else if (sceneName === 'survival') {
+        const module = await import('./scenes/survival.js');
+        this.scenes.survival = new module.SurvivalScene(this);
+      } else if (sceneName === 'results') {
+        const module = await import('./scenes/results.js');
+        this.scenes.results = new module.ResultsScene(this);
+      }
+    } catch (error) {
+      console.warn(`Scene ${sceneName} not found, creating placeholder`);
+      // Create placeholder scene that just shows a message
+      this.scenes[sceneName] = this.createPlaceholderScene(sceneName);
+    }
+  }
+
+  createPlaceholderScene(sceneName) {
+    return {
+      enter: () => {},
+      exit: () => {},
+      update: () => {},
+      handleInput: () => {},
+      render: (ctx) => {
+        ctx.fillStyle = PALETTE.bg0;
+        ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+        ctx.fillStyle = PALETTE.accent;
+        ctx.font = '16px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${sceneName} scene - Coming soon`, VIEW.w / 2, VIEW.h / 2);
+      }
+    };
   }
 
   update(dt) {
@@ -109,22 +160,51 @@ class Game {
   }
 
   render(alpha) {
-    // Render current scene
+    // Render current scene or fallback
     if (this.currentScene && this.currentScene.render) {
       this.currentScene.render(this.ctx, alpha);
+    } else {
+      // Fallback: render blank screen with message
+      this.ctx.fillStyle = PALETTE.bg0;
+      this.ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+      this.ctx.fillStyle = PALETTE.accent;
+      this.ctx.font = '16px monospace';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillText('Loading...', VIEW.w / 2, VIEW.h / 2);
     }
   }
 }
 
 // Start game when DOM is ready
 function initGame() {
+  console.log('Initializing game...');
+  console.log('DOM ready state:', document.readyState);
+  
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) {
+    console.error('Canvas element not found in DOM');
+    return;
+  }
+  console.log('Canvas found:', canvas);
+  
   try {
     window.game = new Game();
-    if (!window.game || !window.game.canvas) {
-      console.error('Game engine failed to initialize');
-    } else {
-      console.log('Game engine initialized successfully');
+    if (!window.game) {
+      console.error('Game instance not created');
+      return;
     }
+    if (!window.game.canvas) {
+      console.error('Game canvas not set');
+      return;
+    }
+    if (!window.game.currentScene) {
+      console.error('No current scene set');
+      return;
+    }
+    console.log('Game engine initialized successfully');
+    console.log('Current scene:', window.game.currentScene);
+    console.log('Canvas size:', window.game.canvas.width, 'x', window.game.canvas.height);
   } catch (error) {
     console.error('Error initializing game:', error);
     console.error(error.stack);
@@ -136,6 +216,6 @@ if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', initGame);
 } else {
   // DOM already loaded
-  initGame();
+  setTimeout(initGame, 100); // Small delay to ensure DOM is fully ready
 }
 
