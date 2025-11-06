@@ -177,14 +177,31 @@ export class GameEngine {
 }
 
 // Start game when DOM is ready
-window.addEventListener('DOMContentLoaded', () => {
+function initGame() {
   try {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) {
+      console.error('Canvas element not found');
+      return;
+    }
+    
     window.game = new GameEngine();
     if (!window.game || !window.game.canvas) {
       console.error('Game engine failed to initialize');
+    } else {
+      console.log('Game engine initialized successfully');
     }
   } catch (error) {
     console.error('Error initializing game:', error);
+    console.error(error.stack);
   }
-});
+}
+
+// Try multiple initialization methods
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initGame);
+} else {
+  // DOM already loaded
+  initGame();
+}
 
