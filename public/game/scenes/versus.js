@@ -67,26 +67,32 @@ export class VersusScene {
   }
 
   update(dt) {
-    // Countdown
-    if (this.countdown > 0) {
-      this.countdown -= dt;
-      if (this.countdown > 2) {
-        this.countdownText = '3';
-      } else if (this.countdown > 1) {
-        this.countdownText = '2';
-      } else if (this.countdown > 0) {
-        this.countdownText = '1';
-      } else {
-        this.countdownText = 'GO!';
-        this.roundActive = true;
-        setTimeout(() => {
-          this.countdownText = '';
-        }, 500);
-      }
-      return;
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = 1/60;
     }
-    
-    if (!this.roundActive) return;
+
+    try {
+      // Countdown
+      if (this.countdown > 0) {
+        this.countdown -= dt;
+        if (this.countdown > 2) {
+          this.countdownText = '3';
+        } else if (this.countdown > 1) {
+          this.countdownText = '2';
+        } else if (this.countdown > 0) {
+          this.countdownText = '1';
+        } else {
+          this.countdownText = 'GO!';
+          this.roundActive = true;
+          setTimeout(() => {
+            this.countdownText = '';
+          }, 500);
+        }
+        return;
+      }
+      
+      if (!this.roundActive) return;
     
     // Update all players with error handling
     for (const player of this.players) {
@@ -173,30 +179,38 @@ export class VersusScene {
       this.arrows.splice(arrowsToRemove[i], 1);
     }
     
-    // Check for round end
-    const alivePlayers = this.players.filter(p => !p.dead);
-    
-    if (alivePlayers.length === 1) {
-      // Winner!
-      alivePlayers[0].wins++;
-      this.scores[alivePlayers[0].id] = alivePlayers[0].wins;
+      // Check for round end
+      const alivePlayers = this.players.filter(p => p && !p.dead);
       
-      if (alivePlayers[0].wins >= WINS_TO_VICTORY) {
-        // Match over
-        this.game.matchWinner = alivePlayers[0];
-        this.game.matchScores = this.scores;
-        this.game.setScene('results');
-      } else {
-        // Next round
+      if (alivePlayers.length === 1) {
+        // Winner!
+        const winner = alivePlayers[0];
+        if (winner && winner.id) {
+          winner.wins++;
+          this.scores[winner.id] = winner.wins;
+          
+          if (winner.wins >= WINS_TO_VICTORY) {
+            // Match over
+            this.game.matchWinner = winner;
+            this.game.matchScores = this.scores;
+            this.game.setScene('results');
+          } else {
+            // Next round
+            this.nextRound();
+          }
+        }
+      } else if (alivePlayers.length === 0) {
+        // Double-KO - replay round
         this.nextRound();
       }
-    } else if (alivePlayers.length === 0) {
-      // Double-KO - replay round
-      this.nextRound();
+      
+      // Update FX
+      if (this.game.fx) {
+        this.game.fx.update(dt);
+      }
+    } catch (error) {
+      console.error('Critical error in versus update:', error);
     }
-    
-    // Update FX
-    this.game.fx.update(dt);
   }
 
   nextRound() {

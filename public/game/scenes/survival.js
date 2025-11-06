@@ -210,7 +210,9 @@ export class SurvivalScene {
         // Next wave
         this.wave++;
         const spawn = this.game.world?.spawns?.p1 || { x: 32, y: 128 };
-        this.player.respawn(spawn.x, spawn.y);
+        if (this.player && this.player.respawn) {
+          this.player.respawn(spawn.x, spawn.y);
+        }
         this.spawnWave();
       }
       
@@ -219,6 +221,9 @@ export class SurvivalScene {
         this.game.fx.update(dt);
       }
     } catch (error) {
+      console.error('Critical error in survival update:', error);
+    }
+  } catch (error) {
       console.error('Critical error in survival update:', error);
     }
   }

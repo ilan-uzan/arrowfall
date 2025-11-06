@@ -7,43 +7,80 @@ export class PhysicsSystem {
   }
 
   updateEntity(entity, dt = FIXED_DT) {
-    // Coyote time
-    if (entity.wasOnGround && !entity.onGround) {
-      entity.coyoteTime = COYOTE_MS / 1000;
-    }
-    if (entity.coyoteTime > 0) {
-      entity.coyoteTime -= dt;
+    if (!entity || !this.world) {
+      console.error('Invalid entity or world in physics update');
+      return;
     }
 
-    // Gravity
-    entity.vy += GRAVITY * dt;
-    const maxFallSpeed = 640;
-    if (entity.vy > maxFallSpeed) {
-      entity.vy = maxFallSpeed;
+    // Validate dt
+    if (!dt || dt <= 0 || dt > 0.1) {
+      dt = FIXED_DT;
     }
 
-    // Update position
-    entity.x += entity.vx * dt;
-    entity.y += entity.vy * dt;
+    try {
+      // Initialize missing properties
+      if (entity.wasOnGround === undefined) entity.wasOnGround = false;
+      if (entity.onGround === undefined) entity.onGround = false;
+      if (entity.coyoteTime === undefined) entity.coyoteTime = 0;
+      if (entity.touchingWall === undefined) {
+        entity.touchingWall = { left: false, right: false };
+      }
 
-    // Check ground
-    entity.wasOnGround = entity.onGround;
-    entity.onGround = this.world.checkOnGround(entity);
+      // Coyote time
+      if (entity.wasOnGround && !entity.onGround) {
+        entity.coyoteTime = COYOTE_MS / 1000;
+      }
+      if (entity.coyoteTime > 0) {
+        entity.coyoteTime -= dt;
+      }
 
-    // Check walls
-    entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
-    entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
+      // Gravity
+      if (entity.vy === undefined) entity.vy = 0;
+      entity.vy += GRAVITY * dt;
+      const maxFallSpeed = 640;
+      if (entity.vy > maxFallSpeed) {
+        entity.vy = maxFallSpeed;
+      }
 
-    // Resolve collisions
-    this.world.resolveCollision(entity);
+      // Update position
+      if (entity.vx === undefined) entity.vx = 0;
+      entity.x += entity.vx * dt;
+      entity.y += entity.vy * dt;
 
-    // Clamp to world bounds
-    const worldWidth = this.world.width * this.world.tileSize;
-    const worldHeight = this.world.height * this.world.tileSize;
-    if (entity.x < 0) entity.x = 0;
-    if (entity.x + entity.width > worldWidth) entity.x = worldWidth - entity.width;
-    if (entity.y < 0) entity.y = 0;
-    if (entity.y + entity.height > worldHeight) entity.y = worldHeight - entity.height;
+      // Check ground
+      entity.wasOnGround = entity.onGround;
+      entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+
+      // Check walls
+      if (this.world.checkTouchingWall) {
+        entity.touchingWall.left = this.world.checkTouchingWall(entity, 'left');
+        entity.touchingWall.right = this.world.checkTouchingWall(entity, 'right');
+      } else {
+        entity.touchingWall.left = false;
+        entity.touchingWall.right = false;
+      }
+
+      // Resolve collisions
+      if (this.world.resolveCollision) {
+        this.world.resolveCollision(entity);
+      }
+
+      // Clamp to world bounds
+      if (this.world.width && this.world.tileSize) {
+        const worldWidth = this.world.width * this.world.tileSize;
+        const worldHeight = this.world.height * this.world.tileSize;
+        if (entity.x < 0) entity.x = 0;
+        if (entity.x + (entity.width || 0) > worldWidth) {
+          entity.x = Math.max(0, worldWidth - (entity.width || 0));
+        }
+        if (entity.y < 0) entity.y = 0;
+        if (entity.y + (entity.height || 0) > worldHeight) {
+          entity.y = Math.max(0, worldHeight - (entity.height || 0));
+        }
+      }
+    } catch (error) {
+      console.error('Error in physics updateEntity:', error);
+    }
   }
 
   applyHorizontalMovement(entity, targetVx, dt = FIXED_DT, inAir = false) {

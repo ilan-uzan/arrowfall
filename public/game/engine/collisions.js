@@ -1,35 +1,49 @@
 // Collision Detection System
 export class CollisionSystem {
-  // AABB collision check
+  // AABB collision check with null safety
   checkAABB(rect1, rect2) {
+    if (!rect1 || !rect2) return false;
+    
+    const r1x = rect1.x || 0;
+    const r1y = rect1.y || 0;
+    const r1w = rect1.width || 0;
+    const r1h = rect1.height || 0;
+    
+    const r2x = rect2.x || 0;
+    const r2y = rect2.y || 0;
+    const r2w = rect2.width || 0;
+    const r2h = rect2.height || 0;
+    
     return (
-      rect1.x < rect2.x + rect2.width &&
-      rect1.x + rect1.width > rect2.x &&
-      rect1.y < rect2.y + (rect2.height || 0) &&
-      rect1.y + (rect1.height || 0) > rect2.y
+      r1x < r2x + r2w &&
+      r1x + r1w > r2x &&
+      r1y < r2y + r2h &&
+      r1y + r1h > r2y
     );
   }
 
   // Check if arrow hits player
   checkArrowPlayer(arrow, player) {
+    if (!arrow || !player) return false;
     if (arrow.ownerId === player.id || player.dead) return false;
     return this.checkAABB(arrow, player);
   }
 
   // Check if player stomps another player
   checkStomp(player, target, stompSpeed = 220) {
-    if (target.dead || player.vy <= stompSpeed) return false;
+    if (!player || !target) return false;
+    if (target.dead || (player.vy || 0) <= stompSpeed) return false;
     
     const playerFeet = {
-      x: player.x,
-      y: player.y + (player.height || 0) - 4,
+      x: player.x || 0,
+      y: (player.y || 0) + ((player.height || 0) - 4),
       width: player.width || 0,
       height: 4
     };
     
     const targetHead = {
-      x: target.x,
-      y: target.y,
+      x: target.x || 0,
+      y: target.y || 0,
       width: target.width || 0,
       height: 4
     };
@@ -39,10 +53,12 @@ export class CollisionSystem {
 
   // Check if player can pickup arrow (squared distance for efficiency)
   checkArrowPickup(player, arrow, pickupRadius = 16) {
-    const playerCenterX = player.x + (player.width || 0) / 2;
-    const playerCenterY = player.y + (player.height || 0) / 2;
-    const arrowCenterX = arrow.x + (arrow.width || 0) / 2;
-    const arrowCenterY = arrow.y + (arrow.height || 0) / 2;
+    if (!player || !arrow) return false;
+    
+    const playerCenterX = (player.x || 0) + ((player.width || 0) / 2);
+    const playerCenterY = (player.y || 0) + ((player.height || 0) / 2);
+    const arrowCenterX = (arrow.x || 0) + ((arrow.width || 0) / 2);
+    const arrowCenterY = (arrow.y || 0) + ((arrow.height || 0) / 2);
     
     const dx = playerCenterX - arrowCenterX;
     const dy = playerCenterY - arrowCenterY;

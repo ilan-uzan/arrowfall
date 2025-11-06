@@ -74,9 +74,11 @@ export class World {
   }
 
   checkCollision(x, y, width, height) {
-    const leftTile = Math.floor(x / this.tileSize);
+    if (!width || !height || width <= 0 || height <= 0) return false;
+    
+    const leftTile = Math.floor(Math.max(0, x) / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
-    const topTile = Math.floor(y / this.tileSize);
+    const topTile = Math.floor(Math.max(0, y) / this.tileSize);
     const bottomTile = Math.floor((y + height) / this.tileSize);
 
     for (let ty = topTile; ty <= bottomTile; ty++) {
@@ -130,33 +132,41 @@ export class World {
   }
 
   resolveCollision(entity) {
-    const { x, y, width, height } = entity;
-    const leftTile = Math.floor(x / this.tileSize);
+    if (!entity) return;
+    
+    const x = entity.x || 0;
+    const y = entity.y || 0;
+    const width = entity.width || 0;
+    const height = entity.height || 0;
+    
+    if (width <= 0 || height <= 0) return;
+    
+    const leftTile = Math.floor(Math.max(0, x) / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
-    const topTile = Math.floor(y / this.tileSize);
+    const topTile = Math.floor(Math.max(0, y) / this.tileSize);
     const bottomTile = Math.floor((y + height) / this.tileSize);
 
     // Check horizontal collision
     for (let ty = topTile; ty <= bottomTile; ty++) {
       if (this.isSolid(leftTile, ty)) {
-        entity.x = (leftTile + 1) * this.tileSize;
-        entity.vx = 0;
+        entity.x = Math.max(0, (leftTile + 1) * this.tileSize);
+        if (entity.vx !== undefined) entity.vx = 0;
       }
       if (this.isSolid(rightTile, ty)) {
-        entity.x = rightTile * this.tileSize - width;
-        entity.vx = 0;
+        entity.x = Math.max(0, rightTile * this.tileSize - width);
+        if (entity.vx !== undefined) entity.vx = 0;
       }
     }
 
     // Check vertical collision
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.isSolid(tx, topTile)) {
-        entity.y = (topTile + 1) * this.tileSize;
-        entity.vy = 0;
+        entity.y = Math.max(0, (topTile + 1) * this.tileSize);
+        if (entity.vy !== undefined) entity.vy = 0;
       }
       if (this.isSolid(tx, bottomTile)) {
-        entity.y = bottomTile * this.tileSize - height;
-        entity.vy = 0;
+        entity.y = Math.max(0, bottomTile * this.tileSize - height);
+        if (entity.vy !== undefined) entity.vy = 0;
         if (entity.onGround !== undefined) {
           entity.onGround = true;
         }
