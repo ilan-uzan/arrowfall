@@ -215,23 +215,46 @@ export class NPC {
         break;
 
       case NPC_STATE.RETRIEVE:
-        // Move toward target arrow
+        // Find arrow again (might have moved or been picked up)
+        let currentNearestArrow = null;
+        let currentNearestDistSq = 25000;
+        
+        for (const arrow of arrows) {
+          if (!arrow || !arrow.embedded || !arrow.active) continue;
+          const arrowDx = this.x - arrow.x;
+          const arrowDy = this.y - arrow.y;
+          const arrowDistSq = arrowDx * arrowDx + arrowDy * arrowDy;
+          if (arrowDistSq < currentNearestDistSq) {
+            currentNearestDistSq = arrowDistSq;
+            currentNearestArrow = arrow;
+          }
+        }
+        
+        if (!currentNearestArrow) {
+          this.state = NPC_STATE.PATROL;
+          this.stateTimer = 0;
+          break;
+        }
+        
+        this.targetX = currentNearestArrow.x;
+        this.targetY = currentNearestArrow.y;
+        
         const targetDx = this.targetX - this.x;
+        const targetDy = this.targetY - this.y;
         this.facing = targetDx > 0 ? 1 : -1;
         this.vx = this.facing * MAX_VEL_X * 0.8;
         
-        // Jump if needed
-        const targetDy = this.targetY - this.y;
+        // Jump if needed to reach arrow
         if (this.onGround && targetDy < -20 && this.stateTimer > 0.2) {
           this.vy = -380;
           this.stateTimer = 0;
         }
         
-        // Check if arrow reached (16^2 = 256)
+        // Check if arrow reached (24^2 = 576 for easier pickup)
         const arrowDx = this.x - this.targetX;
         const arrowDy = this.y - this.targetY;
         const arrowDistSq = arrowDx * arrowDx + arrowDy * arrowDy;
-        if (arrowDistSq < 256) {
+        if (arrowDistSq < 576) {
           // Pickup arrow
           if (this.arrows < this.maxArrows) {
             this.arrows++;
