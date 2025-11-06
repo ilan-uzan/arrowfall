@@ -270,13 +270,20 @@ export class NPC {
           if (this.arrows < this.maxArrows) {
             this.arrows++;
             this.game.audio.playPickup();
-            // Remove arrow from scene
+            // Remove arrow from scene (optimized - use squared distance)
             const survival = this.game.sceneManager.scenes.survival;
             if (survival) {
-              const arrowIndex = survival.arrows.findIndex(a => a.embedded && 
-                Math.abs(a.x - this.targetX) < 16 && Math.abs(a.y - this.targetY) < 16);
-              if (arrowIndex >= 0) {
-                survival.arrows.splice(arrowIndex, 1);
+              // Find arrow by squared distance (16^2 = 256)
+              for (let i = survival.arrows.length - 1; i >= 0; i--) {
+                const arrow = survival.arrows[i];
+                if (!arrow.embedded) continue;
+                const dx = arrow.x - this.targetX;
+                const dy = arrow.y - this.targetY;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < 256) {
+                  survival.arrows.splice(i, 1);
+                  break;
+                }
               }
             }
           }
