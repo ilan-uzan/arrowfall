@@ -1,20 +1,11 @@
 // Gamepad API Wrapper
-export interface GamepadState {
-  id: string;
-  index: number;
-  connected: boolean;
-  buttons: readonly GamepadButton[];
-  axes: readonly number[];
-}
-
 export class GamepadManager {
-  private gamepads: (Gamepad | null)[] = [];
-
   constructor() {
+    this.gamepads = [];
     this.setupListeners();
   }
 
-  private setupListeners() {
+  setupListeners() {
     window.addEventListener('gamepadconnected', () => {
       this.updateGamepads();
     });
@@ -24,31 +15,31 @@ export class GamepadManager {
     });
   }
 
-  updateGamepads(): void {
+  updateGamepads() {
     const pads = navigator.getGamepads();
     if (!pads) {
       this.gamepads = [];
       return;
     }
-    this.gamepads = Array.from(pads);
+    this.gamepads = Array.from(pads).filter(p => p !== null);
   }
 
-  getGamepad(index: number): Gamepad | null {
+  getGamepad(index) {
     this.updateGamepads();
-    return this.gamepads[index] || null;
+    return this.gamepads.find(p => p && p.index === index) || null;
   }
 
-  getAllGamepads(): Gamepad[] {
+  getAllGamepads() {
     this.updateGamepads();
-    return this.gamepads.filter((p): p is Gamepad => p !== null);
+    return this.gamepads.filter(p => p !== null);
   }
 
-  getConnectedCount(): number {
+  getConnectedCount() {
     return this.getAllGamepads().length;
   }
 
   // Request gamepad access (required for some browsers)
-  requestAccess(): void {
+  requestAccess() {
     if (navigator.getGamepads) {
       navigator.getGamepads();
     }

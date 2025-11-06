@@ -1,36 +1,21 @@
 // World - Single TowerFall-style Arena
-import { TILE, PALETTE, VIEW } from './constants.js';
-
-export interface Bounds {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface SpawnPoint {
-  x: number;
-  y: number;
-}
+import { TILE, PALETTE } from './constants.js';
 
 export class World {
-  readonly tileSize: number = TILE;
-  readonly width: number = 20;  // tiles
-  readonly height: number = 11; // tiles
-  readonly spawns: Map<string, SpawnPoint>;
-  private solids: boolean[][];
-
   constructor() {
-    this.solids = this.createArenaLayout();
+    this.tileSize = TILE;
+    this.width = 20;  // tiles
+    this.height = 11; // tiles
     this.spawns = this.createSpawnPoints();
+    this.solids = this.createArenaLayout();
   }
 
-  private createArenaLayout(): boolean[][] {
+  createArenaLayout() {
     // TowerFall-style arena: side platforms, central pit, high ledges
-    const solids: boolean[][] = [];
+    const solids = [];
     
     for (let y = 0; y < this.height; y++) {
-      const row: boolean[] = [];
+      const row = [];
       for (let x = 0; x < this.width; x++) {
         let solid = false;
         
@@ -63,37 +48,32 @@ export class World {
     return solids;
   }
 
-  private createSpawnPoints(): Map<string, SpawnPoint> {
-    const spawns = new Map<string, SpawnPoint>();
-    
-    // Four spawn points, far apart
-    spawns.set('p1', { x: 32, y: 128 });      // Left platform
-    spawns.set('p2', { x: 288, y: 128 });     // Right platform
-    spawns.set('p3', { x: 160, y: 48 });      // Top center
-    spawns.set('p4', { x: 160, y: 144 });     // Bottom center
-    
-    // NPC spawns (for survival mode)
-    spawns.set('npc1', { x: 96, y: 128 });
-    spawns.set('npc2', { x: 224, y: 128 });
-    
-    return spawns;
+  createSpawnPoints() {
+    return {
+      p1: { x: 32, y: 128 },      // Left platform
+      p2: { x: 288, y: 128 },     // Right platform
+      p3: { x: 160, y: 48 },      // Top center
+      p4: { x: 160, y: 144 },     // Bottom center
+      npc1: { x: 96, y: 128 },    // NPC spawn 1
+      npc2: { x: 224, y: 128 }    // NPC spawn 2
+    };
   }
 
-  worldToTile(x: number, y: number): { tx: number; ty: number } {
+  worldToTile(x, y) {
     return {
       tx: Math.floor(x / this.tileSize),
       ty: Math.floor(y / this.tileSize)
     };
   }
 
-  isSolid(tx: number, ty: number): boolean {
+  isSolid(tx, ty) {
     if (ty < 0 || ty >= this.height || tx < 0 || tx >= this.width) {
       return true; // Out of bounds is solid
     }
     return this.solids[ty]?.[tx] === true;
   }
 
-  checkCollision(x: number, y: number, width: number, height: number): boolean {
+  checkCollision(x, y, width, height) {
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
     const topTile = Math.floor(y / this.tileSize);
@@ -109,7 +89,7 @@ export class World {
     return false;
   }
 
-  checkOnGround(entity: Bounds): boolean {
+  checkOnGround(entity) {
     const { x, y, width } = entity;
     const bottomY = y + (entity.height || 0);
     const leftTile = Math.floor(x / this.tileSize);
@@ -124,7 +104,7 @@ export class World {
     return false;
   }
 
-  checkTouchingWall(entity: Bounds, direction: 'left' | 'right'): boolean {
+  checkTouchingWall(entity, direction) {
     const { x, y, width, height } = entity;
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
@@ -149,7 +129,7 @@ export class World {
     return false;
   }
 
-  resolveCollision(entity: { x: number; y: number; width: number; height: number; vx: number; vy: number; onGround?: boolean }): void {
+  resolveCollision(entity) {
     const { x, y, width, height } = entity;
     const leftTile = Math.floor(x / this.tileSize);
     const rightTile = Math.floor((x + width) / this.tileSize);
@@ -185,7 +165,7 @@ export class World {
   }
 
   // Line of sight check (for NPC AI)
-  hasLineOfSight(x1: number, y1: number, x2: number, y2: number): boolean {
+  hasLineOfSight(x1, y1, x2, y2) {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -203,7 +183,7 @@ export class World {
     return true;
   }
 
-  render(ctx: CanvasRenderingContext2D): void {
+  render(ctx) {
     // Draw tiles
     ctx.fillStyle = PALETTE.bg1;
     for (let y = 0; y < this.height; y++) {

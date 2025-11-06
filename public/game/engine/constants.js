@@ -13,7 +13,7 @@ export const PALETTE = {
   player4: "#fee440",  // yellow
   arrow: "#e0e0e0",    // light gray
   spike: "#b23a48"     // red
-} as const;
+};
 
 export const TILE = 16;                    // Base tile size
 export const VIEW = { w: 320, h: 180 };   // Logical resolution
@@ -46,7 +46,7 @@ export const PLAYER_COLORS = [
   PALETTE.player2,
   PALETTE.player3,
   PALETTE.player4
-] as const;
+];
 
 // Gamepad Button Mappings
 export const GAMEPAD_BUTTONS = {
@@ -55,7 +55,7 @@ export const GAMEPAD_BUTTONS = {
   PAUSE: 9,       // Start (Xbox) / Options (PS5)
   COLOR_LEFT: 4,  // LB (Xbox) / L1 (PS5)
   COLOR_RIGHT: 5  // RB (Xbox) / R1 (PS5)
-} as const;
+};
 
 // D-Pad (for menu navigation)
 export const DPAD = {
@@ -63,5 +63,5 @@ export const DPAD = {
   RIGHT: 15,
   UP: 12,
   DOWN: 13
-} as const;
+};
 

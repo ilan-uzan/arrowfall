@@ -3,22 +3,19 @@
   "version": "2.0.0",
   "description": "A fast-paced local multiplayer archer brawler - TowerFall-style",
   "type": "module",
+  "main": "server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "test": "vitest"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
   },
   "keywords": ["game", "canvas", "local-multiplayer", "controller"],
   "author": "ilan-uzan",
   "license": "MIT",
   "dependencies": {
-    "zustand": "^4.4.7"
+    "express": "^4.18.2",
+    "ejs": "^3.1.9",
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1"
   },
-  "devDependencies": {
-    "@types/node": "^20.10.6",
-    "typescript": "^5.3.3",
-    "vite": "^5.0.8",
-    "vitest": "^1.1.0"
-  }
+  "devDependencies": {}
 }

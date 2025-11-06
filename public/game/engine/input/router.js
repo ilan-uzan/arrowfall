@@ -2,36 +2,23 @@
 import { GamepadManager } from './gamepad.js';
 import { DEADZONE, GAMEPAD_BUTTONS, DPAD } from '../constants.js';
 
-export type ActionState = {
-  left: boolean;
-  right: boolean;
-  jump: boolean;
-  shoot: boolean;
-  pause: boolean;
-  axisX: number;
-};
-
 export class InputRouter {
-  private gamepadManager: GamepadManager;
-  private playerBindings: Map<number, number>; // playerId -> gamepadIndex
-  private lastButtonStates: Map<string, { [key: number]: boolean }>; // Track button states for single-frame detection
-
   constructor() {
     this.gamepadManager = new GamepadManager();
-    this.playerBindings = new Map();
-    this.lastButtonStates = new Map();
+    this.playerBindings = new Map(); // playerId -> gamepadIndex
+    this.lastButtonStates = new Map(); // Track button states for single-frame detection
     
     // Request gamepad access on user interaction
     window.addEventListener('click', () => this.gamepadManager.requestAccess());
     window.addEventListener('keydown', () => this.gamepadManager.requestAccess());
   }
 
-  update(): void {
+  update() {
     this.gamepadManager.updateGamepads();
   }
 
   // Check if any unbound gamepad pressed button 0 (join)
-  checkJoinButton(): number {
+  checkJoinButton() {
     const boundIndices = new Set(this.playerBindings.values());
     const allGamepads = this.gamepadManager.getAllGamepads();
     
@@ -52,26 +39,26 @@ export class InputRouter {
   }
 
   // Bind a gamepad to a player
-  bindGamepad(playerId: number, gamepadIndex: number): boolean {
+  bindGamepad(playerId, gamepadIndex) {
     if (this.playerBindings.has(playerId)) return false;
     this.playerBindings.set(playerId, gamepadIndex);
     return true;
   }
 
   // Unbind a player
-  unbindPlayer(playerId: number): void {
+  unbindPlayer(playerId) {
     this.playerBindings.delete(playerId);
   }
 
   // Get actions for a player
-  getActions(playerId: number): ActionState | null {
+  getActions(playerId) {
     const gamepadIndex = this.playerBindings.get(playerId);
     if (gamepadIndex === undefined) return null;
     
     return this.getGamepadActions(gamepadIndex);
   }
 
-  private getGamepadActions(gamepadIndex: number): ActionState | null {
+  getGamepadActions(gamepadIndex) {
     const pad = this.gamepadManager.getGamepad(gamepadIndex);
     if (!pad || !pad.connected) return null;
 
@@ -122,11 +109,11 @@ export class InputRouter {
     };
   }
 
-  getConnectedCount(): number {
+  getConnectedCount() {
     return this.gamepadManager.getConnectedCount();
   }
 
-  getAllGamepads(): Gamepad[] {
+  getAllGamepads() {
     return this.gamepadManager.getAllGamepads();
   }
 }

@@ -1,29 +1,12 @@
 // Physics System - AABB Collision & Movement
-import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS } from './constants.js';
-import { World } from './world.js';
-
-export interface PhysicsEntity {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  vx: number;
-  vy: number;
-  onGround: boolean;
-  wasOnGround: boolean;
-  touchingWall: { left: boolean; right: boolean };
-  coyoteTime: number;
-  jumpBuffer: number;
-}
+import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
 
 export class PhysicsSystem {
-  private world: World;
-
-  constructor(world: World) {
+  constructor(world) {
     this.world = world;
   }
 
-  updateEntity(entity: PhysicsEntity, dt: number): void {
+  updateEntity(entity, dt = FIXED_DT) {
     // Coyote time
     if (entity.wasOnGround && !entity.onGround) {
       entity.coyoteTime = COYOTE_MS / 1000;
@@ -63,7 +46,7 @@ export class PhysicsSystem {
     if (entity.y + entity.height > worldHeight) entity.y = worldHeight - entity.height;
   }
 
-  applyHorizontalMovement(entity: PhysicsEntity, targetVx: number, dt: number, inAir: boolean = false): void {
+  applyHorizontalMovement(entity, targetVx, dt = FIXED_DT, inAir = false) {
     if (inAir) {
       // Air movement (reduced control)
       if (Math.abs(targetVx) > 0.1) {
@@ -79,13 +62,13 @@ export class PhysicsSystem {
     }
   }
 
-  applyJump(entity: PhysicsEntity, jumpPressed: boolean): boolean {
+  applyJump(entity, jumpPressed) {
     // Jump buffer - capture jump press
     if (jumpPressed && entity.jumpBuffer <= 0) {
       entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
     }
     if (entity.jumpBuffer > 0) {
-      entity.jumpBuffer -= 1/60; // Fixed timestep
+      entity.jumpBuffer -= FIXED_DT; // Fixed timestep
     }
 
     // Execute jump
@@ -98,7 +81,7 @@ export class PhysicsSystem {
     return false;
   }
 
-  applyWallSlide(entity: PhysicsEntity, holdingLeft: boolean, holdingRight: boolean): void {
+  applyWallSlide(entity, holdingLeft, holdingRight) {
     if (!entity.onGround && entity.vy > 0) {
       if ((entity.touchingWall.left && holdingLeft) || 
           (entity.touchingWall.right && holdingRight)) {
@@ -109,7 +92,7 @@ export class PhysicsSystem {
     }
   }
 
-  private approach(current: number, target: number, step: number): number {
+  approach(current, target, step) {
     if (current < target) {
       return Math.min(current + step, target);
     } else {
