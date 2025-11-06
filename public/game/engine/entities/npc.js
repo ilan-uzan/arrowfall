@@ -231,6 +231,14 @@ export class NPC {
     return newArrow;
   }
 
+  pickupArrow() {
+    if (this.arrows < this.maxArrows) {
+      this.arrows++;
+      return true;
+    }
+    return false;
+  }
+
   die() {
     this.dead = true;
     this.vx = 0;

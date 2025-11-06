@@ -148,6 +148,9 @@ export class VersusScene {
   }
 
   nextRound() {
+    // Reset countdown
+    this.countdown = 3.0;
+    this.countdownText = '3';
     this.round++;
     this.roundActive = false;
     this.countdown = 3.0;
