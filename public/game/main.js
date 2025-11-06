@@ -113,8 +113,9 @@ class Game {
         const module = await import('./scenes/results.js');
         this.scenes.results = new module.ResultsScene(this);
       }
+      console.log(`Scene ${sceneName} loaded`);
     } catch (error) {
-      console.warn(`Scene ${sceneName} not found, creating placeholder`);
+      console.error(`Failed to load scene ${sceneName}:`, error);
       // Create placeholder scene that just shows a message
       this.scenes[sceneName] = this.createPlaceholderScene(sceneName);
     }
