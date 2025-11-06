@@ -20,7 +20,10 @@ export class PhysicsSystem {
     try {
       // Initialize missing properties
       if (entity.wasOnGround === undefined) entity.wasOnGround = false;
-      if (entity.onGround === undefined) entity.onGround = false;
+      if (entity.onGround === undefined) {
+        // Check ground state on first update
+        entity.onGround = this.world.checkOnGround ? this.world.checkOnGround(entity) : false;
+      }
       if (entity.coyoteTime === undefined) entity.coyoteTime = 0;
       if (entity.touchingWall === undefined) {
         entity.touchingWall = { left: false, right: false };
@@ -104,6 +107,11 @@ export class PhysicsSystem {
     // Clamp dt to prevent issues
     dt = Math.max(0, Math.min(dt, 0.1));
     
+    // Clamp targetVx to max velocity
+    if (Math.abs(targetVx) > MAX_VEL_X) {
+      targetVx = targetVx > 0 ? MAX_VEL_X : -MAX_VEL_X;
+    }
+    
     if (inAir) {
       // Air movement (reduced control)
       if (Math.abs(targetVx) > 0.1) {
@@ -113,9 +121,9 @@ export class PhysicsSystem {
         entity.vx = this.approach(entity.vx, 0, MOVE_ACC * dt * 0.3);
       }
     } else {
-      // Ground movement - more responsive
+      // Ground movement - responsive and smooth
       if (Math.abs(targetVx) > 0.1) {
-        // Accelerate towards target velocity
+        // Accelerate towards target velocity (works on ground!)
         entity.vx = this.approach(entity.vx, targetVx, MOVE_ACC * dt);
       } else {
         // Ground friction (stop quickly when no input)
@@ -123,7 +131,7 @@ export class PhysicsSystem {
       }
     }
     
-    // Clamp velocity
+    // Final clamp velocity
     if (Math.abs(entity.vx) > MAX_VEL_X) {
       entity.vx = entity.vx > 0 ? MAX_VEL_X : -MAX_VEL_X;
     }

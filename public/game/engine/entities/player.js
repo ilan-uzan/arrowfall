@@ -45,12 +45,19 @@ export class Player {
       // Use current ground state (from previous frame) for movement
       const inAir = !this.onGround;
       
-      // Horizontal movement - use axisX for smoother control
+      // Horizontal movement - use axisX proportionally for smooth control
       let targetVx = 0;
-      if (actions.left || (actions.axisX && actions.axisX < -0.1)) {
+      if (actions.axisX && Math.abs(actions.axisX) > 0.1) {
+        // Use axisX value proportionally (0 to 1) scaled to MAX_VEL_X
+        // This gives smooth, proportional control instead of instant full speed
+        targetVx = actions.axisX * MAX_VEL_X;
+        this.facing = actions.axisX > 0 ? 1 : -1;
+      } else if (actions.left) {
+        // Fallback to boolean for D-Pad
         targetVx = -MAX_VEL_X;
         this.facing = -1;
-      } else if (actions.right || (actions.axisX && actions.axisX > 0.1)) {
+      } else if (actions.right) {
+        // Fallback to boolean for D-Pad
         targetVx = MAX_VEL_X;
         this.facing = 1;
       }
