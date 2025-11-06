@@ -360,29 +360,30 @@ export class SurvivalScene {
       this.level.render(ctx);
     }
 
-    // Render arrows
-    this.arrows.forEach(arrow => {
-      arrow.render(ctx);
-    });
+    // Render arrows (optimized loop)
+    for (let i = 0; i < this.arrows.length; i++) {
+      this.arrows[i].render(ctx);
+    }
 
-    // Render NPCs
-    this.npcs.forEach(npc => {
-      npc.render(ctx);
-    });
+    // Render NPCs (optimized loop)
+    for (let i = 0; i < this.npcs.length; i++) {
+      this.npcs[i].render(ctx);
+    }
 
     // Render player
     if (this.player) {
       this.player.render(ctx);
     }
 
-    // Render particles
-    this.particles.forEach(particle => {
+    // Render particles (optimized loop)
+    for (let i = 0; i < this.particles.length; i++) {
+      const particle = this.particles[i];
       const alpha = particle.life / particle.maxLife;
       ctx.fillStyle = particle.color;
       ctx.globalAlpha = alpha;
       ctx.fillRect(particle.x - particle.size/2, particle.y - particle.size/2, particle.size, particle.size);
       ctx.globalAlpha = 1.0;
-    });
+    }
 
     // Render HUD
     this.renderHUD(ctx);

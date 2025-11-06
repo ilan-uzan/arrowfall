@@ -31,7 +31,15 @@ export class CharacterSelectScene {
     const gamepadIndex = this.game.inputRouter.checkJoinButton();
     if (gamepadIndex >= 0) {
       const playerId = this.players.length + 1;
-      if (playerId <= this.maxPlayers && !this.players.find(p => p.id === playerId)) {
+      // Check if player already exists (optimized)
+      let playerExists = false;
+      for (const p of this.players) {
+        if (p.id === playerId) {
+          playerExists = true;
+          break;
+        }
+      }
+      if (playerId <= this.maxPlayers && !playerExists) {
         if (this.game.inputRouter.tryBindGamepad(playerId, gamepadIndex)) {
           this.players.push({
             id: playerId,
@@ -58,15 +66,14 @@ export class CharacterSelectScene {
   }
 
   handleInput(actions, playerId) {
-      // Find player efficiently (optimized)
-      let player = null;
-      for (const p of this.players) {
-        if (p.id === playerId) {
-          player = p;
-          break;
-        }
+    // Find player efficiently (optimized)
+    let player = null;
+    for (const p of this.players) {
+      if (p.id === playerId) {
+        player = p;
+        break;
       }
-      if (!player) return;
+    }
     if (!player) return;
 
     if (actions.jumpPressed) {
