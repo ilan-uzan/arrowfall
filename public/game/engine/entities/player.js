@@ -45,51 +45,26 @@ export class Player {
       // Get current ground state for movement decisions
       const inAir = !this.onGround;
       
-      // Horizontal movement - use axisX proportionally for smooth control
+      // Horizontal movement - SIMPLIFIED
       let targetVx = 0;
       
-      // Debug: Log input values if there's unexpected movement
-      // (Remove this after debugging)
-      if (this.vx < -10 || this.vx > 10) {
-        console.log(`Player ${this.id} moving unexpectedly:`, {
-          vx: this.vx,
-          axisX: actions.axisX,
-          left: actions.left,
-          right: actions.right,
-          targetVx: targetVx
-        });
-      }
-      
-      // Priority: axisX > boolean left/right
-      // Only use axisX if it's significant (above deadzone threshold)
-      if (actions.axisX !== undefined && !isNaN(actions.axisX) && Math.abs(actions.axisX) > 0.15) {
-        // Use axisX value proportionally (0 to 1) scaled to MAX_VEL_X
-        // This gives smooth, proportional control instead of instant full speed
+      // Use axisX if available and significant
+      if (actions.axisX !== undefined && !isNaN(actions.axisX) && Math.abs(actions.axisX) > 0.1) {
         targetVx = actions.axisX * MAX_VEL_X;
         this.facing = actions.axisX > 0 ? 1 : -1;
-      } else {
-        // Only use boolean left/right if axisX is not significant or undefined
-        // This prevents conflicts between axisX and boolean left/right
-        // Explicitly check that left/right are boolean true (not just truthy)
-        if (actions.left === true && actions.right !== true) {
-          targetVx = -MAX_VEL_X;
-          this.facing = -1;
-        } else if (actions.right === true && actions.left !== true) {
-          targetVx = MAX_VEL_X;
-          this.facing = 1;
-        }
-        // If neither left nor right, targetVx stays 0
+      } 
+      // Otherwise use boolean left/right
+      else if (actions.left === true && actions.right !== true) {
+        targetVx = -MAX_VEL_X;
+        this.facing = -1;
+      } else if (actions.right === true && actions.left !== true) {
+        targetVx = MAX_VEL_X;
+        this.facing = 1;
       }
       
-      // Ensure targetVx is valid (not NaN or Infinity)
+      // Validate targetVx
       if (isNaN(targetVx) || !isFinite(targetVx)) {
         targetVx = 0;
-      }
-      
-      // If no input, ensure we're stopping (apply stronger friction)
-      if (targetVx === 0 && Math.abs(this.vx) > 5) {
-        // Apply extra friction when stopping
-        this.vx *= 0.9;
       }
 
       // Apply horizontal movement

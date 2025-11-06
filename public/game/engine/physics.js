@@ -1,4 +1,4 @@
-// Physics System - Simple and Reliable
+// Physics System - Classic Platformer Approach
 import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
 import { wrapPosition } from './wrap.js';
 
@@ -27,8 +27,8 @@ export class PhysicsSystem {
       // Store old ground state
       const wasOnGround = entity.onGround;
       
-      // Check ground state FIRST (before any movement)
-      entity.onGround = this.checkOnGround(entity);
+      // Check ground state BEFORE movement
+      entity.onGround = this.isOnGround(entity);
       
       // Update coyote time
       if (wasOnGround && !entity.onGround) {
@@ -38,77 +38,80 @@ export class PhysicsSystem {
         entity.coyoteTime -= dt;
       }
 
-      // Apply gravity ONLY if not on ground
-      if (!entity.onGround) {
-        const clampedDt = Math.max(0, Math.min(dt, 0.1));
-        entity.vy += GRAVITY * clampedDt;
-        const maxFallSpeed = 640;
-        if (entity.vy > maxFallSpeed) {
-          entity.vy = maxFallSpeed;
-        }
-      } else {
-        // On ground - stop falling
-        if (entity.vy > 0) {
-          entity.vy = 0;
-        }
+      // Apply gravity (always, but we'll stop it on ground collision)
+      const clampedDt = Math.max(0, Math.min(dt, 0.1));
+      entity.vy += GRAVITY * clampedDt;
+      const maxFallSpeed = 640;
+      if (entity.vy > maxFallSpeed) {
+        entity.vy = maxFallSpeed;
       }
 
-      // Move horizontally first
+      // Move horizontally FIRST
       if (entity.vx !== 0) {
-        const moveX = entity.vx * dt;
+        const moveX = entity.vx * clampedDt;
         const newX = entity.x + moveX;
         
         // Check horizontal collision
-        if (!this.checkCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
-          entity.x = newX;
-        } else {
-          // Hit wall - stop and snap to wall
+        if (this.hasCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
+          // Hit wall - stop horizontal movement
           if (moveX > 0) {
-            // Moving right, hit right wall
+            // Moving right - snap to left side of wall
             const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
             entity.x = rightTile * this.world.tileSize - (entity.width || 12);
             entity.touchingWall.right = true;
           } else {
-            // Moving left, hit left wall
+            // Moving left - snap to right side of wall
             const leftTile = Math.floor(entity.x / this.world.tileSize);
             entity.x = (leftTile + 1) * this.world.tileSize;
             entity.touchingWall.left = true;
           }
           entity.vx = 0;
+        } else {
+          // No collision - move freely
+          entity.x = newX;
+          entity.touchingWall.left = false;
+          entity.touchingWall.right = false;
         }
       }
 
-      // Move vertically
+      // Move vertically SECOND
       if (entity.vy !== 0) {
-        const moveY = entity.vy * dt;
+        const moveY = entity.vy * clampedDt;
         const newY = entity.y + moveY;
         
         // Check vertical collision
-        if (!this.checkCollision(entity.x, newY, entity.width || 12, entity.height || 14)) {
-          entity.y = newY;
-        } else {
+        if (this.hasCollision(entity.x, newY, entity.width || 12, entity.height || 14)) {
           // Hit floor or ceiling
           if (moveY > 0) {
-            // Moving down, hit ground
+            // Moving down - hit ground
             const bottomTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
             entity.y = bottomTile * this.world.tileSize - (entity.height || 14);
             entity.vy = 0;
             entity.onGround = true;
           } else {
-            // Moving up, hit ceiling
+            // Moving up - hit ceiling
             const topTile = Math.floor(entity.y / this.world.tileSize);
             entity.y = (topTile + 1) * this.world.tileSize;
             entity.vy = 0;
           }
+        } else {
+          // No collision - move freely
+          entity.y = newY;
+          if (moveY > 0) {
+            // Falling - not on ground
+            entity.onGround = false;
+          }
         }
       }
 
-      // Update wall touching state
-      entity.touchingWall.left = this.checkTouchingWall(entity, 'left');
-      entity.touchingWall.right = this.checkTouchingWall(entity, 'right');
+      // Final ground check (in case we're standing still)
+      if (entity.vy === 0 && !entity.onGround) {
+        entity.onGround = this.isOnGround(entity);
+      }
 
-      // Final ground check
-      entity.onGround = this.checkOnGround(entity);
+      // Update wall touching state
+      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
+      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
 
       // Apply wrapping
       const wrapped = wrapPosition(entity.x, entity.y);
@@ -119,12 +122,12 @@ export class PhysicsSystem {
     }
   }
 
-  // Simple collision check
-  checkCollision(x, y, width, height) {
+  // Simple collision check - returns true if there's a collision
+  hasCollision(x, y, width, height) {
     const leftTile = Math.floor(x / this.world.tileSize);
-    const rightTile = Math.floor((x + width) / this.world.tileSize);
+    const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
     const topTile = Math.floor(y / this.world.tileSize);
-    const bottomTile = Math.floor((y + height) / this.world.tileSize);
+    const bottomTile = Math.floor((y + height - 0.1) / this.world.tileSize);
 
     for (let ty = topTile; ty <= bottomTile; ty++) {
       for (let tx = leftTile; tx <= rightTile; tx++) {
@@ -136,8 +139,8 @@ export class PhysicsSystem {
     return false;
   }
 
-  // Check if entity is on ground
-  checkOnGround(entity) {
+  // Check if entity is on ground (touching a solid tile below)
+  isOnGround(entity) {
     if (!entity) return false;
     
     const x = entity.x || 0;
@@ -145,17 +148,18 @@ export class PhysicsSystem {
     const width = entity.width || 12;
     const height = entity.height || 14;
     
-    // Check if there's a solid tile directly below the entity
+    // Check tiles directly below the entity
     const bottomY = y + height;
     const leftTile = Math.floor(x / this.world.tileSize);
-    const rightTile = Math.floor((x + width) / this.world.tileSize);
+    const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
     const tileBelow = Math.floor(bottomY / this.world.tileSize);
 
     for (let tx = leftTile; tx <= rightTile; tx++) {
       if (this.world.isSolid(tx, tileBelow)) {
-        // Check if entity is actually touching the ground (within 1 pixel)
+        // Check if we're close enough to the ground (within 2 pixels)
         const groundY = tileBelow * this.world.tileSize;
-        if (bottomY >= groundY - 1 && bottomY <= groundY + 1) {
+        const distanceToGround = bottomY - groundY;
+        if (distanceToGround >= -2 && distanceToGround <= 2) {
           return true;
         }
       }
@@ -164,7 +168,7 @@ export class PhysicsSystem {
   }
 
   // Check if entity is touching a wall
-  checkTouchingWall(entity, direction) {
+  isTouchingWall(entity, direction) {
     if (!entity || !direction) return false;
     
     const x = entity.x || 0;
@@ -172,22 +176,20 @@ export class PhysicsSystem {
     const width = entity.width || 12;
     const height = entity.height || 14;
     
-    const leftTile = Math.floor(x / this.world.tileSize);
-    const rightTile = Math.floor((x + width) / this.world.tileSize);
     const topTile = Math.floor(y / this.world.tileSize);
-    const bottomTile = Math.floor((y + height) / this.world.tileSize);
+    const bottomTile = Math.floor((y + height - 0.1) / this.world.tileSize);
 
     if (direction === 'left') {
-      const tileLeft = Math.floor(x / this.world.tileSize);
+      const leftTile = Math.floor(x / this.world.tileSize);
       for (let ty = topTile; ty <= bottomTile; ty++) {
-        if (this.world.isSolid(tileLeft, ty)) {
+        if (this.world.isSolid(leftTile, ty)) {
           return true;
         }
       }
     } else if (direction === 'right') {
-      const tileRight = Math.floor((x + width) / this.world.tileSize);
+      const rightTile = Math.floor((x + width) / this.world.tileSize);
       for (let ty = topTile; ty <= bottomTile; ty++) {
-        if (this.world.isSolid(tileRight, ty)) {
+        if (this.world.isSolid(rightTile, ty)) {
           return true;
         }
       }
