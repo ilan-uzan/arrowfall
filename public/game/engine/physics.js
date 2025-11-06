@@ -38,12 +38,19 @@ export class PhysicsSystem {
         entity.coyoteTime -= dt;
       }
 
-      // ALWAYS apply gravity (classic platformer approach)
+      // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
-      entity.vy += GRAVITY * clampedDt;
-      const maxFallSpeed = 640;
-      if (entity.vy > maxFallSpeed) {
-        entity.vy = maxFallSpeed;
+      if (!entity.onGround) {
+        entity.vy += GRAVITY * clampedDt;
+        const maxFallSpeed = 640;
+        if (entity.vy > maxFallSpeed) {
+          entity.vy = maxFallSpeed;
+        }
+      } else {
+        // On ground - ensure velocity is zero
+        if (entity.vy > 0) {
+          entity.vy = 0;
+        }
       }
 
       // Move horizontally FIRST
@@ -85,6 +92,8 @@ export class PhysicsSystem {
             entity.y = bottomTile * this.world.tileSize - (entity.height || 14);
             entity.vy = 0;
             entity.onGround = true;
+            // CRITICAL: Stop gravity when on ground to prevent bouncing
+            entity.vy = 0;
           } else {
             // Moving up - hit ceiling
             const topTile = Math.floor(entity.y / this.world.tileSize);
@@ -93,14 +102,16 @@ export class PhysicsSystem {
           }
         } else {
           entity.y = newY;
-          if (moveY > 0) {
+          // Only set onGround to false if actually falling
+          if (moveY > 0 && entity.vy > 0) {
             entity.onGround = false;
           }
         }
       }
 
-      // Final ground check - snap to ground if very close (when not moving)
-      if (!entity.onGround && entity.vy === 0 && Math.abs(entity.vx) < 10) {
+      // Final ground check - only snap if entity is very close to ground and not moving
+      // This prevents bouncing loops in pits
+      if (!entity.onGround && entity.vy === 0 && Math.abs(entity.vx) < 5) {
         const bottomY = entity.y + (entity.height || 14);
         const leftTile = Math.floor(entity.x / this.world.tileSize);
         const rightTile = Math.floor((entity.x + (entity.width || 12) - 0.1) / this.world.tileSize);
@@ -110,10 +121,11 @@ export class PhysicsSystem {
           if (this.world.isSolid(tx, tileBelow)) {
             const groundY = tileBelow * this.world.tileSize;
             const distance = bottomY - groundY;
-            // Snap to ground if within 5 pixels
-            if (distance > 0 && distance <= 5) {
+            // Only snap if very close (within 2 pixels) to prevent bouncing
+            if (distance > 0 && distance <= 2) {
               entity.y = groundY - (entity.height || 14);
               entity.onGround = true;
+              entity.vy = 0; // Ensure velocity is zero
               break;
             }
           }
@@ -123,6 +135,14 @@ export class PhysicsSystem {
       // Update wall touching state
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
+
+      // Final ground state check (after all movement)
+      entity.onGround = this.isOnGround(entity);
+      
+      // If on ground, ensure velocity is zero
+      if (entity.onGround && entity.vy > 0) {
+        entity.vy = 0;
+      }
 
       // Apply wrapping
       const wrapped = wrapPosition(entity.x, entity.y);
