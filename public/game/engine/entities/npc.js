@@ -64,10 +64,13 @@ export class NPC {
     }
 
     try {
-      // Update AI behavior FIRST to determine movement
-      const newArrow = this.updateBehavior(dt, world, player, arrows || []);
+      // Use current ground state (from previous frame) for movement
+      const inAir = !this.onGround;
       
-      // Update physics AFTER movement is determined
+      // Update AI behavior to determine movement
+      const newArrow = this.updateBehavior(dt, world, player, arrows || [], inAir);
+      
+      // Update physics AFTER movement is determined (applies velocity to position)
       this.physics.updateEntity(this, dt);
       
       return newArrow;
@@ -77,7 +80,7 @@ export class NPC {
     }
   }
 
-  updateBehavior(dt, world, player, arrows) {
+  updateBehavior(dt, world, player, arrows, inAir) {
     if (!player || !world || player.dead) return null;
     
     try {
@@ -94,9 +97,6 @@ export class NPC {
       
       // Validate player position
       if (isNaN(player.x) || isNaN(player.y)) return null;
-      
-      // Check ground state for movement (use current state)
-      const inAir = !this.onGround;
 
     // Evade if player is too close (80^2 = 6400)
     if (distSq < 6400 && this.state !== NPC_STATE.EVADE) {
