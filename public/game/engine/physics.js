@@ -29,13 +29,24 @@ export class PhysicsSystem {
       const wasOnGround = entity.onGround;
       
       // Check ground state BEFORE movement
-      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
-      // This prevents false ground detection during jumps
-      if (entity.vy === undefined || entity.vy >= -50) {
-        entity.onGround = this.isOnGround(entity);
+      // CRITICAL: If on bottom wall, lock ground state to prevent flickering
+      const initialBottomY = entity.y + (entity.height || 14);
+      const initialBottomTile = Math.floor(initialBottomY / this.world.tileSize);
+      const initialAtBottomWall = initialBottomTile >= (this.world.height - 1);
+      
+      if (initialAtBottomWall && entity.onGround) {
+        // Lock ground state when on bottom wall to prevent flickering
+        entity.onGround = true;
       } else {
-        // If jumping up fast, definitely not on ground
-        entity.onGround = false;
+        // Normal ground detection
+        // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+        // This prevents false ground detection during jumps
+        if (entity.vy === undefined || entity.vy >= -50) {
+          entity.onGround = this.isOnGround(entity);
+        } else {
+          // If jumping up fast, definitely not on ground
+          entity.onGround = false;
+        }
       }
       
       // Update coyote time
@@ -48,7 +59,16 @@ export class PhysicsSystem {
 
       // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
-      if (!entity.onGround) {
+      
+      // CRITICAL: If on bottom wall, prevent gravity and lock velocity to zero
+      const gravityBottomY = entity.y + (entity.height || 14);
+      const gravityBottomTile = Math.floor(gravityBottomY / this.world.tileSize);
+      const gravityAtBottomWall = gravityBottomTile >= (this.world.height - 1);
+      
+      if (gravityAtBottomWall && entity.onGround) {
+        // On bottom wall - prevent gravity and lock velocity
+        entity.vy = 0; // Lock velocity to zero
+      } else if (!entity.onGround) {
         entity.vy += GRAVITY * clampedDt;
         const maxFallSpeed = 640;
         if (entity.vy > maxFallSpeed) {
