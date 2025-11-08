@@ -24,6 +24,9 @@ export class PhysicsSystem {
         entity.touchingWall = { left: false, right: false };
       }
       if (entity.onBottomWall === undefined) entity.onBottomWall = false;
+      if (entity.jumpBuffer === undefined) entity.jumpBuffer = 0;
+      if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
+      if (entity.landingCooldown === undefined) entity.landingCooldown = 0; // Prevent jumping immediately after landing
 
       // Store old ground state
       const wasOnGround = entity.onGround;
@@ -55,6 +58,18 @@ export class PhysicsSystem {
       }
       if (entity.coyoteTime > 0) {
         entity.coyoteTime -= dt;
+      }
+      
+      // Update landing cooldown - prevents jumping immediately after landing
+      if (entity.landingCooldown > 0) {
+        entity.landingCooldown -= dt;
+      }
+      
+      // CRITICAL: Clear jump buffer when landing to prevent stuck jump state
+      if (!wasOnGround && entity.onGround) {
+        // Just landed - clear jump buffer and set landing cooldown
+        entity.jumpBuffer = 0;
+        entity.landingCooldown = 0.15; // 150ms cooldown after landing
       }
 
       // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
@@ -171,6 +186,9 @@ export class PhysicsSystem {
               entity.y = groundY - (entity.height || 14);
               entity.onGround = true;
               entity.vy = 0; // Ensure velocity is zero
+              // CRITICAL: Clear jump buffer when snapping to ground
+              entity.jumpBuffer = 0;
+              entity.landingCooldown = 0.2; // Set landing cooldown
               break;
             }
           }
@@ -380,6 +398,18 @@ export class PhysicsSystem {
       entity.jumpCooldown = 0;
     }
     
+    // Initialize landing cooldown if needed
+    if (entity.landingCooldown === undefined) {
+      entity.landingCooldown = 0;
+    }
+    
+    // CRITICAL: Don't process jump if just landed (prevents stuck jump state)
+    if (entity.landingCooldown > 0) {
+      // Clear jump buffer if just landed
+      entity.jumpBuffer = 0;
+      return false;
+    }
+    
     // Decrease jump cooldown
     if (entity.jumpCooldown > 0) {
       entity.jumpCooldown -= FIXED_DT;
@@ -418,7 +448,8 @@ export class PhysicsSystem {
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
                     entity.jumpCooldown <= 0 && // Don't jump if on cooldown
-                    entity.jumpCooldown <= 0.1; // Extra check: only jump if cooldown is very low
+                    entity.jumpCooldown <= 0.1 && // Extra check: only jump if cooldown is very low
+                    (entity.landingCooldown === undefined || entity.landingCooldown <= 0); // Don't jump if just landed
     
     if (entity.jumpBuffer > 0 && canJump) {
       // CRITICAL: Double-check we're not on bottom wall before allowing jump
