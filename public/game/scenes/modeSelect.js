@@ -14,6 +14,18 @@ export class ModeSelectScene {
     this.selectedButton = 0;
     this.animationTime = 0;
     this.lastNavTime = 0;
+    
+    // Ensure input router is updated
+    if (this.game.inputRouter) {
+      this.game.inputRouter.update();
+    }
+    
+    // Ensure player 1 has a controller bound
+    const gamepads = this.game.inputRouter.getAllGamepads();
+    if (gamepads.length > 0 && !this.game.inputRouter.playerBindings.has(1)) {
+      this.game.inputRouter.bindGamepad(1, gamepads[0].index);
+    }
+    
     console.log('Mode Select scene entered');
   }
 

@@ -19,8 +19,12 @@ export class LobbyScene {
     this.lastNavTime = 0;
     console.log('Lobby scene entered');
     
-    // Auto-bind first connected gamepad
-    this.game.inputRouter.update();
+    // Ensure input router is updated
+    if (this.game.inputRouter) {
+      this.game.inputRouter.update();
+    }
+    
+    // Auto-bind first connected gamepad if not already bound
     const gamepads = this.game.inputRouter.getAllGamepads();
     if (gamepads.length > 0 && !this.game.inputRouter.playerBindings.has(1)) {
       this.game.inputRouter.bindGamepad(1, gamepads[0].index);
@@ -82,12 +86,10 @@ export class LobbyScene {
   handleInput(actions, playerId) {
     if (!actions) return;
     
-    // Back to mode select
+    // Back to mode select - only player 1 can go back
     if (actions.pause && playerId === 1) {
-      // Unbind all players
-      for (let i = 1; i <= 4; i++) {
-        this.game.inputRouter.unbindPlayer(i);
-      }
+      // Don't unbind players - just go back to mode select
+      // This preserves controller bindings if user wants to return
       this.game.setScene('modeSelect');
     }
   }
