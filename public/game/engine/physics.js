@@ -106,14 +106,18 @@ export class PhysicsSystem {
             if (entity.jumpCooldown === undefined) {
               entity.jumpCooldown = 0;
             }
-            // Check if at bottom wall - if so, set longer cooldown
+            // Check if at bottom wall - if so, completely disable jumping
             const bottomY = entity.y + (entity.height || 14);
             const bottomTile = Math.floor(bottomY / this.world.tileSize);
             const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
             if (atBottomWall) {
-              entity.jumpCooldown = 1.0; // 1000ms cooldown when landing at bottom wall (increased significantly)
+              // Completely disable jumping on bottom wall
+              entity.jumpCooldown = 999.0; // Effectively infinite cooldown
+              entity.jumpBuffer = 0; // Clear jump buffer
+              entity.onBottomWall = true; // Mark as on bottom wall
             } else {
               entity.jumpCooldown = 0.2; // 200ms cooldown when landing normally
+              entity.onBottomWall = false; // Clear bottom wall flag
             }
           } else {
             // Moving up - hit ceiling
