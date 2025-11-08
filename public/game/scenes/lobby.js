@@ -62,7 +62,8 @@ export class LobbyScene {
     // Use single-frame button press detection to prevent multiple triggers
     for (let i = 1; i <= this.players.length; i++) {
       const actions = this.game.inputRouter.getActions(i);
-      if (actions && actions.jumpPressed) {
+      // jump is already single-frame (jumpPressed in router)
+      if (actions && actions.jump) {
         const player = this.players[i - 1];
         if (player && !player.ready) {
           player.ready = true;
