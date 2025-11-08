@@ -156,25 +156,24 @@ export class PhysicsSystem {
             entity.onGround = true;
             // CRITICAL: Stop gravity when on ground to prevent bouncing
             entity.vy = 0;
-            // CRITICAL: Clear jump buffer and set cooldowns when landing
+            // CRITICAL: Clear jump buffer and set cooldowns when landing to prevent bounce loops
             entity.jumpBuffer = 0; // Always clear jump buffer on landing
-            entity.landingCooldown = 0.2; // 200ms landing cooldown to prevent immediate jumping
+            entity.jumpLockTime = 0.25; // 250ms lock after landing to prevent bounce loops
             // CRITICAL: Set jump cooldown when landing to prevent immediate jump spam
             if (entity.jumpCooldown === undefined) {
               entity.jumpCooldown = 0;
             }
-            // Check if at bottom wall - if so, completely disable jumping
+            // Check if at bottom wall - if so, set longer cooldowns
             const bottomY = entity.y + (entity.height || 14);
             const bottomTile = Math.floor(bottomY / this.world.tileSize);
             const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
             if (atBottomWall) {
-              // Completely disable jumping on bottom wall
-              entity.jumpCooldown = 999.0; // Effectively infinite cooldown
-              entity.jumpBuffer = 0; // Clear jump buffer
-              entity.landingCooldown = 999.0; // Infinite landing cooldown on bottom wall
+              // Longer cooldowns on bottom wall to prevent bounce loops
+              entity.jumpCooldown = 0.4; // 400ms cooldown
+              entity.jumpLockTime = 0.3; // 300ms lock
               entity.onBottomWall = true; // Mark as on bottom wall
             } else {
-              entity.jumpCooldown = 0.3; // 300ms cooldown when landing normally (increased)
+              entity.jumpCooldown = 0.3; // 300ms cooldown when landing normally
               entity.onBottomWall = false; // Clear bottom wall flag
             }
           } else {
