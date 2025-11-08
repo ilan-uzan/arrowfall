@@ -101,6 +101,19 @@ export class PhysicsSystem {
             entity.onGround = true;
             // CRITICAL: Stop gravity when on ground to prevent bouncing
             entity.vy = 0;
+            // CRITICAL: Set jump cooldown when landing to prevent immediate jump spam
+            if (entity.jumpCooldown === undefined) {
+              entity.jumpCooldown = 0;
+            }
+            // Check if at bottom wall - if so, set longer cooldown
+            const bottomY = entity.y + (entity.height || 14);
+            const worldBottom = this.world.height * this.world.tileSize;
+            const atBottomWall = bottomY >= worldBottom - 2;
+            if (atBottomWall) {
+              entity.jumpCooldown = 0.4; // 400ms cooldown when landing at bottom wall
+            } else {
+              entity.jumpCooldown = 0.2; // 200ms cooldown when landing normally
+            }
           } else {
             // Moving up - hit ceiling
             const topTile = Math.floor(entity.y / this.world.tileSize);
