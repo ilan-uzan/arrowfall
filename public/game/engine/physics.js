@@ -171,16 +171,16 @@ export class PhysicsSystem {
         entity.vy = 0;
       }
       
-      // CRITICAL: If entity is at bottom wall, prevent jumping for a short time after landing
-      // This prevents jump spam at the bottom of the map
+      // CRITICAL: If entity is at bottom wall, prevent jumping completely
       // Check if entity is standing on the bottom row of tiles (tile y = height - 1)
       const bottomY = entity.y + (entity.height || 14);
       const bottomTile = Math.floor(bottomY / this.world.tileSize);
       const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
       
       if (atBottomWall && entity.onGround) {
-        // Ensure jump cooldown is set when at bottom wall to prevent spam
-        if (entity.jumpCooldown === undefined || entity.jumpCooldown <= 0.1) {
+        // Force jump cooldown to prevent any jumping on bottom wall
+        // Always maintain at least 1.0 second cooldown when on bottom wall
+        if (entity.jumpCooldown === undefined || entity.jumpCooldown < 1.0) {
           entity.jumpCooldown = 1.0; // 1000ms cooldown when at bottom wall (increased significantly)
         }
       }
