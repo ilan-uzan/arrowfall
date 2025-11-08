@@ -66,11 +66,28 @@ export class PhysicsSystem {
         entity.landingCooldown -= dt;
       }
       
+      // Track ground stability - only allow jumping if ground is stable
+      if (entity.onGround) {
+        entity.groundStableTime += dt;
+      } else {
+        // Not on ground - reset stability timer
+        entity.groundStableTime = 0;
+      }
+      
       // CRITICAL: Clear jump buffer when landing to prevent stuck jump state
       if (!wasOnGround && entity.onGround) {
         // Just landed - clear jump buffer and set landing cooldown
         entity.jumpBuffer = 0;
-        entity.landingCooldown = 0.15; // 150ms cooldown after landing
+        entity.landingCooldown = 0.2; // 200ms cooldown after landing (increased)
+        entity.groundStableTime = 0; // Reset stability timer on landing
+      }
+      
+      // CRITICAL: If ground detection is flickering (ground state changed rapidly), clear jump buffer
+      // This prevents stuck jump state when ground detection is unstable
+      if (wasOnGround !== entity.onGround) {
+        // Ground state changed - if we were on ground and now we're not, or vice versa
+        // Clear jump buffer to prevent stuck state
+        entity.jumpBuffer = 0;
       }
 
       // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
@@ -421,8 +438,15 @@ export class PhysicsSystem {
     }
     
     // Jump buffer - only set on new press
+    // CRITICAL: Only set jump buffer if ground is stable (prevents stuck state from flickering)
     if (jumpPressed && entity.jumpBuffer <= 0) {
-      entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      // Only allow jump buffer if ground is stable or we're in air (not flickering)
+      const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.05);
+      const inAir = !entity.onGround && entity.vy > 0;
+      if (groundStable || inAir || entity.coyoteTime > 0 || 
+          (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) {
+        entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      }
     }
     if (entity.jumpBuffer > 0) {
       entity.jumpBuffer -= FIXED_DT;

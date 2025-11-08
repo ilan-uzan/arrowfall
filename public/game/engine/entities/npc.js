@@ -389,6 +389,7 @@ export class NPC {
         this.jumpCooldown = 0; // Reset jump cooldown
         this.landingCooldown = 0; // Reset landing cooldown
         this.onBottomWall = false; // Reset bottom wall flag
+        this.groundStableTime = 0; // Reset ground stability timer
         this.state = NPC_STATE.PATROL;
         this.stateTimer = 0;
         // Reset patrol direction independently - alternate based on ID to ensure variety
