@@ -70,16 +70,17 @@ export class Player {
       // Apply horizontal movement
       this.physics.applyHorizontalMovement(this, targetVx, dt, inAir);
 
-      // Jumping
-      if (actions.jump) {
-        this.physics.applyJump(this, true);
-      }
-
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
       
-      // Apply physics (gravity + collision) - this moves the entity
+      // Apply physics (gravity + collision) - this moves the entity FIRST
+      // This ensures ground state is up-to-date before jump logic
       this.physics.updateEntity(this, dt);
+      
+      // Jumping - AFTER physics update so ground state is current
+      if (actions.jump) {
+        this.physics.applyJump(this, true);
+      }
 
       // Shooting
       if (actions.shoot && !this.shootHeld) {

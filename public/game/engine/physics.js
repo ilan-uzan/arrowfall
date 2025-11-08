@@ -29,6 +29,7 @@ export class PhysicsSystem {
       if (entity.landingCooldown === undefined) entity.landingCooldown = 0; // Prevent jumping immediately after landing
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0; // Time entity has been on ground continuously
       if (entity.groundFlickerCooldown === undefined) entity.groundFlickerCooldown = 0; // Cooldown after ground state flickering
+      if (entity.jumpBufferJustSet === undefined) entity.jumpBufferJustSet = false; // Flag to track if jump buffer was just set this frame
 
       // Store old ground state
       const wasOnGround = entity.onGround;
@@ -85,10 +86,13 @@ export class PhysicsSystem {
       
       // CRITICAL: If ground detection is flickering (ground state changed rapidly), clear jump buffer
       // This prevents stuck jump state when ground detection is unstable
+      // BUT: Don't clear if we just set the jump buffer this frame (prevents clearing valid jump attempts)
       if (wasOnGround !== entity.onGround) {
         // Ground state changed - if we were on ground and now we're not, or vice versa
-        // Clear jump buffer to prevent stuck state
-        entity.jumpBuffer = 0;
+        // Only clear jump buffer if it wasn't just set this frame
+        if (!entity.jumpBufferJustSet) {
+          entity.jumpBuffer = 0;
+        }
         // Set a short cooldown to prevent immediate jump attempts during flickering
         entity.groundFlickerCooldown = 0.1; // 100ms cooldown after ground state change
       }
