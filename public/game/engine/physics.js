@@ -137,9 +137,16 @@ export class PhysicsSystem {
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
 
       // Final ground state check (after all movement)
-      entity.onGround = this.isOnGround(entity);
+      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+      // This prevents ground detection from interfering with jumps
+      if (entity.vy >= -100) {
+        entity.onGround = this.isOnGround(entity);
+      } else {
+        // If jumping up fast, definitely not on ground
+        entity.onGround = false;
+      }
       
-      // If on ground, ensure velocity is zero
+      // If on ground, ensure velocity is zero (but allow upward velocity for jumps)
       if (entity.onGround && entity.vy > 0) {
         entity.vy = 0;
       }
