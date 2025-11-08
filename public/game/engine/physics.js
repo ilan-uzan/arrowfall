@@ -279,32 +279,45 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity
+      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity and snap position
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       if (entity.touchingWall.left || entity.touchingWall.right) {
         entity.vx = 0; // Completely zero velocity when touching any wall
+        
+        // Snap position to wall to prevent floating
+        const leftTile = Math.floor(entity.x / this.world.tileSize);
+        const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
+        
+        if (entity.touchingWall.left) {
+          // Snap to right side of left wall
+          entity.x = (leftTile + 1) * this.world.tileSize;
+        }
+        if (entity.touchingWall.right) {
+          // Snap to left side of right wall
+          entity.x = rightTile * this.world.tileSize - (entity.width || 12);
+        }
       }
       
-          // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
-          const bottomY = entity.y + (entity.height || 14);
-          const bottomTile = Math.floor(bottomY / this.world.tileSize);
-          const atBottomWall = bottomTile >= (this.world.height - 1);
-          
-          if (atBottomWall) {
-            // Completely disable jumping on bottom wall
-            entity.jumpBuffer = 0;
-            entity.jumpCooldown = 999.0; // Infinite cooldown
-            entity.onBottomWall = true;
-            // Cancel any upward velocity
-            if (entity.vy < 0) {
-              entity.vy = 0;
-            }
-            // Lock ground state
-            entity.onGround = true;
-          } else {
-            entity.onBottomWall = false;
-          }
+      // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
+      const bottomY = entity.y + (entity.height || 14);
+      const bottomTile = Math.floor(bottomY / this.world.tileSize);
+      const atBottomWall = bottomTile >= (this.world.height - 1);
+      
+      if (atBottomWall) {
+        // Completely disable jumping on bottom wall
+        entity.jumpBuffer = 0;
+        entity.jumpCooldown = 999.0; // Infinite cooldown
+        entity.onBottomWall = true;
+        // Cancel any upward velocity
+        if (entity.vy < 0) {
+          entity.vy = 0;
+        }
+        // Lock ground state
+        entity.onGround = true;
+      } else {
+        entity.onBottomWall = false;
+      }
 
       // Apply wrapping
       const wrapped = wrapPosition(entity.x, entity.y);
