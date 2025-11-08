@@ -42,7 +42,7 @@ export class PhysicsSystem {
       // Decrement contact lock timer
       if (entity.contactLock > 0) {
         entity.contactLock -= dt;
-        // If locked, only prevent horizontal/vertical movement, but allow jumps
+        // If locked, only prevent horizontal/downward movement, but allow jumps
         if (entity.contactLock > 0) {
           // Only prevent movement if we're still in contact
           const stillInContact = this.hasCollision(entity.x, entity.y, entity.width || 12, entity.height || 14);
@@ -53,17 +53,23 @@ export class PhysicsSystem {
             if (entity.vy > 0) {
               entity.vy = 0;
             }
-            // Ensure position stays locked
-            if (entity.lastContactX !== null) {
+            // Only lock position if moving down or stationary - allow upward movement
+            if (entity.lastContactX !== null && entity.vx === 0) {
               entity.x = entity.lastContactX;
             }
-            if (entity.lastContactY !== null && entity.vy <= 0) {
+            if (entity.lastContactY !== null && entity.vy >= 0) {
               entity.y = entity.lastContactY;
             }
           } else {
-            // No longer in contact, clear lock
+            // No longer in contact, clear lock immediately
             entity.contactLock = 0;
+            entity.lastContactX = null;
+            entity.lastContactY = null;
           }
+        } else {
+          // Lock expired, clear contact positions
+          entity.lastContactX = null;
+          entity.lastContactY = null;
         }
       }
       
@@ -116,9 +122,9 @@ export class PhysicsSystem {
         }
         
         // If we snapped, lock contact briefly to prevent bounce loop
-        // Only lock if we weren't already in contact (new collision)
-        if (snapped && entity.contactLock <= 0) {
-          entity.contactLock = 0.02; // 20ms lock - shorter to allow normal movement
+        // Only lock if we weren't already in contact (new collision) and not jumping
+        if (snapped && entity.contactLock <= 0 && entity.vy >= 0) {
+          entity.contactLock = 0.01; // Very short lock - just 10ms to prevent immediate re-collision
           entity.lastContactX = entity.x;
           entity.lastContactY = entity.y;
         }
@@ -199,9 +205,9 @@ export class PhysicsSystem {
             entity.touchingWall.left = true;
           }
           entity.vx = 0;
-          // Lock contact briefly to prevent bounce loop
-          if (entity.contactLock <= 0) {
-            entity.contactLock = 0.02;
+          // Lock contact briefly to prevent bounce loop (only if not jumping)
+          if (entity.contactLock <= 0 && entity.vy >= 0) {
+            entity.contactLock = 0.01;
             entity.lastContactX = entity.x;
           }
         } else {
@@ -263,9 +269,9 @@ export class PhysicsSystem {
                   entity.onBottomWall = false;
                 }
               }
-              // Lock contact briefly to prevent bounce loop
-              if (entity.contactLock <= 0) {
-                entity.contactLock = 0.02;
+              // Lock contact briefly to prevent bounce loop (only if not jumping)
+              if (entity.contactLock <= 0 && entity.vy >= 0) {
+                entity.contactLock = 0.01;
                 entity.lastContactY = entity.y;
               }
             } else {
@@ -273,9 +279,9 @@ export class PhysicsSystem {
               const topTile = Math.floor(entity.y / this.world.tileSize);
               entity.y = (topTile + 1) * this.world.tileSize;
               entity.vy = 0;
-              // Lock contact briefly to prevent bounce loop
-              if (entity.contactLock <= 0) {
-                entity.contactLock = 0.02;
+              // Lock contact briefly to prevent bounce loop (only if not jumping)
+              if (entity.contactLock <= 0 && entity.vy >= 0) {
+                entity.contactLock = 0.01;
                 entity.lastContactY = entity.y;
               }
             }
@@ -343,9 +349,9 @@ export class PhysicsSystem {
             if (distance > 0 && distance <= 3) {
               entity.y = groundY - (entity.height || 14);
               entity.vy = 0;
-              // Lock contact briefly to prevent bounce loop
-              if (entity.contactLock <= 0) {
-                entity.contactLock = 0.02;
+              // Lock contact briefly to prevent bounce loop (only if not jumping)
+              if (entity.contactLock <= 0 && entity.vy >= 0) {
+                entity.contactLock = 0.01;
                 entity.lastContactY = entity.y;
               }
               break;
@@ -372,9 +378,9 @@ export class PhysicsSystem {
           // Snap to left side of right wall EXACTLY
           entity.x = rightTile * this.world.tileSize - (entity.width || 12);
         }
-        // Lock contact briefly to prevent bounce loop
-        if (entity.contactLock <= 0) {
-          entity.contactLock = 0.02;
+        // Lock contact briefly to prevent bounce loop (only if not jumping)
+        if (entity.contactLock <= 0 && entity.vy >= 0) {
+          entity.contactLock = 0.01;
           entity.lastContactX = entity.x;
         }
       }
@@ -614,13 +620,15 @@ export class PhysicsSystem {
     }
     
     // Jump conditions - prevent loops while allowing normal jumping
-    // CRITICAL: Allow jumping if ground is stable (been on ground for at least 20ms) OR coyote time is active
-    // The jumpLockTime prevents immediate re-jumping after landing, but doesn't block all jumps
-    const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.02);
+    // CRITICAL: Allow jumping if ground is stable (been on ground for at least 10ms) OR coyote time is active
+    // Reduced stability requirement to allow faster jumping after landing
+    const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.01);
     // Allow jumping from ground if: (ground is stable AND lock time expired) OR coyote time is active
     // This allows jumping even if justLanded is true, as long as jumpLockTime has expired
     const canJumpFromGround = (groundStable && entity.jumpLockTime <= 0) || entity.coyoteTime > 0;
     
+    // CRITICAL: Don't check contactLock here - it should not prevent jumps
+    // Contact lock only prevents movement, not jump execution
     const canJump = entity.jumpBuffer > 0 && // Has jump buffer
                     entity.jumpCooldown <= 0 && // Not on cooldown
                     entity.jumpLockTime <= 0 && // Not locked (prevents loops)
