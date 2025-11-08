@@ -36,7 +36,7 @@ export class LobbyScene {
     this.lastNavTime += dt;
     
     // Check for new gamepad presses (join button)
-    this.game.inputRouter.update();
+    // Note: inputRouter.update() is called in main game loop
     const joinGamepadIndex = this.game.inputRouter.checkJoinButton();
     
     if (joinGamepadIndex >= 0 && this.players.length < 4) {
@@ -59,11 +59,12 @@ export class LobbyScene {
     }
     
     // Check for ready/start (all players press A/Cross)
+    // Use single-frame button press detection to prevent multiple triggers
     for (let i = 1; i <= this.players.length; i++) {
       const actions = this.game.inputRouter.getActions(i);
-      if (actions && actions.jump) {
+      if (actions && actions.jumpPressed) {
         const player = this.players[i - 1];
-        if (!player.ready) {
+        if (player && !player.ready) {
           player.ready = true;
           this.readyCount++;
           console.log(`Player ${i} ready`);
