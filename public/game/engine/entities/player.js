@@ -137,6 +137,7 @@ export class Player {
         this.jumpBuffer = 0;
         this.jumpCooldown = 0; // Reset jump cooldown
         this.jumpLockTime = 0; // Reset jump lock time
+        this.justLanded = false; // Reset just landed flag
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
       }
