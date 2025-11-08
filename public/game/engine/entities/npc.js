@@ -414,6 +414,9 @@ export class NPC {
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
         this.jumpAttempted = false; // Reset jump attempted flag
+        this.contactLock = 0; // Reset contact lock
+        this.lastContactX = null; // Reset contact position
+        this.lastContactY = null; // Reset contact position
         this.state = NPC_STATE.PATROL;
         this.stateTimer = 0;
         // Reset patrol direction independently - alternate based on ID to ensure variety
