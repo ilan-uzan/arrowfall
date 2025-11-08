@@ -140,6 +140,7 @@ export class Player {
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
         this.groundFlickerCooldown = 0; // Reset ground flicker cooldown
+        this.jumpBufferJustSet = false; // Reset jump buffer just set flag
       }
 
   getBounds() {

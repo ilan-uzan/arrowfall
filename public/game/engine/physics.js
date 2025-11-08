@@ -458,10 +458,18 @@ export class PhysicsSystem {
       if (groundStable || inAir || entity.coyoteTime > 0 || 
           (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) {
         entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
+        // Mark that jump buffer was just set this frame
+        entity.jumpBufferJustSet = true;
       }
     }
     if (entity.jumpBuffer > 0) {
       entity.jumpBuffer -= FIXED_DT;
+      // Clear the "just set" flag after first decrement
+      if (entity.jumpBufferJustSet && entity.jumpBuffer < JUMP_BUFFER_MS / 1000 - FIXED_DT) {
+        entity.jumpBufferJustSet = false;
+      }
+    } else {
+      entity.jumpBufferJustSet = false;
     }
 
     // Can jump from ground, coyote time, or wall
@@ -526,6 +534,7 @@ export class PhysicsSystem {
       }
       
       entity.jumpBuffer = 0;
+      entity.jumpBufferJustSet = false; // Clear flag when jump executes
       entity.coyoteTime = 0;
       return true; // Jump succeeded
     }
