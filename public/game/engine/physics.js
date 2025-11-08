@@ -107,10 +107,10 @@ export class PhysicsSystem {
             }
             // Check if at bottom wall - if so, set longer cooldown
             const bottomY = entity.y + (entity.height || 14);
-            const worldBottom = this.world.height * this.world.tileSize;
-            const atBottomWall = bottomY >= worldBottom - 2;
+            const bottomTile = Math.floor(bottomY / this.world.tileSize);
+            const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
             if (atBottomWall) {
-              entity.jumpCooldown = 0.6; // 600ms cooldown when landing at bottom wall (increased)
+              entity.jumpCooldown = 1.0; // 1000ms cooldown when landing at bottom wall (increased significantly)
             } else {
               entity.jumpCooldown = 0.2; // 200ms cooldown when landing normally
             }
@@ -173,14 +173,15 @@ export class PhysicsSystem {
       
       // CRITICAL: If entity is at bottom wall, prevent jumping for a short time after landing
       // This prevents jump spam at the bottom of the map
+      // Check if entity is standing on the bottom row of tiles (tile y = height - 1)
       const bottomY = entity.y + (entity.height || 14);
-      const worldBottom = this.world.height * this.world.tileSize;
-      const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
+      const bottomTile = Math.floor(bottomY / this.world.tileSize);
+      const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
       
       if (atBottomWall && entity.onGround) {
         // Ensure jump cooldown is set when at bottom wall to prevent spam
         if (entity.jumpCooldown === undefined || entity.jumpCooldown <= 0.1) {
-          entity.jumpCooldown = 0.5; // 500ms cooldown when at bottom wall (increased)
+          entity.jumpCooldown = 1.0; // 1000ms cooldown when at bottom wall (increased significantly)
         }
       }
 
@@ -350,8 +351,8 @@ export class PhysicsSystem {
     // 3. Entity is actually on ground, has coyote time, or is touching wall
     // 4. Entity is not at the very bottom of the map (prevent bottom wall jump spam)
     const bottomY = entity.y + (entity.height || 14);
-    const worldBottom = this.world.height * this.world.tileSize;
-    const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
+    const bottomTile = Math.floor(bottomY / this.world.tileSize);
+    const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
     
     const canJump = (entity.onGround || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
