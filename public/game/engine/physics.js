@@ -95,8 +95,8 @@ export class PhysicsSystem {
           // Hit floor or ceiling
           if (moveY > 0) {
             // Moving down - hit ground
-            const bottomTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
-            entity.y = bottomTile * this.world.tileSize - (entity.height || 14);
+            const groundTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
+            entity.y = groundTile * this.world.tileSize - (entity.height || 14);
             entity.vy = 0;
             entity.onGround = true;
             // CRITICAL: Stop gravity when on ground to prevent bouncing
