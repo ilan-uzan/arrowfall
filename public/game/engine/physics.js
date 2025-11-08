@@ -313,11 +313,11 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, COMPLETELY zero velocity and snap position
+      // CRITICAL: If on ground, COMPLETELY zero velocity and snap position PERFECTLY
       if (entity.onGround) {
         entity.vy = 0; // Completely zero velocity when on ground
         
-        // Snap position to ground
+        // Snap position to ground PERFECTLY to prevent floating
         const bottomY = entity.y + (entity.height || 14);
         const tileBelow = Math.floor(bottomY / this.world.tileSize);
         const leftTile = Math.floor(entity.x / this.world.tileSize);
@@ -330,29 +330,39 @@ export class PhysicsSystem {
             if (distance > 0 && distance <= 3) {
               entity.y = groundY - (entity.height || 14);
               entity.vy = 0;
+              // Lock contact to prevent bounce loop
+              if (entity.contactLock <= 0) {
+                entity.contactLock = 0.05;
+                entity.lastContactY = entity.y;
+              }
               break;
             }
           }
         }
       }
       
-      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity and snap position
+      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity and snap PERFECTLY
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       if (entity.touchingWall.left || entity.touchingWall.right) {
         entity.vx = 0; // Completely zero velocity when touching any wall
         
-        // Snap position to wall to prevent floating
+        // Snap position to wall PERFECTLY to prevent floating
         const leftTile = Math.floor(entity.x / this.world.tileSize);
         const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
         
         if (entity.touchingWall.left) {
-          // Snap to right side of left wall
+          // Snap to right side of left wall EXACTLY
           entity.x = (leftTile + 1) * this.world.tileSize;
         }
         if (entity.touchingWall.right) {
-          // Snap to left side of right wall
+          // Snap to left side of right wall EXACTLY
           entity.x = rightTile * this.world.tileSize - (entity.width || 12);
+        }
+        // Lock contact to prevent bounce loop
+        if (entity.contactLock <= 0) {
+          entity.contactLock = 0.05;
+          entity.lastContactX = entity.x;
         }
       }
       
