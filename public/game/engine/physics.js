@@ -33,28 +33,12 @@ export class PhysicsSystem {
       // Store old ground state
       const wasOnGround = entity.onGround;
       
-      // Check ground state BEFORE movement
-      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
-      // This prevents false ground detection during jumps
-      if (entity.vy === undefined || entity.vy >= -50) {
-        // Normal ground detection - always check
-        entity.onGround = this.isOnGround(entity);
-      } else {
-        // If jumping up fast, definitely not on ground
-        entity.onGround = false;
-      }
-      
       // Update coyote time
       if (wasOnGround && !entity.onGround) {
         entity.coyoteTime = COYOTE_MS / 1000;
       }
       if (entity.coyoteTime > 0) {
         entity.coyoteTime -= dt;
-      }
-      
-      // Update landing cooldown - prevents jumping immediately after landing
-      if (entity.landingCooldown > 0) {
-        entity.landingCooldown -= dt;
       }
       
       // Track ground stability - only allow jumping if ground is stable
@@ -65,27 +49,8 @@ export class PhysicsSystem {
         entity.groundStableTime = 0;
       }
       
-      // CRITICAL: Clear jump buffer when landing to prevent bounce loops
-      // Only process landing once per landing event to prevent repeated triggers
-      if (!wasOnGround && entity.onGround) {
-        // Just landed - ALWAYS clear jump buffer to prevent bounce loops
-        entity.jumpBuffer = 0;
-        entity.groundStableTime = 0; // Reset stability timer on landing
-        entity.jumpLockTime = 0.1; // 100ms lock after landing to prevent immediate re-jumping
-        entity.justLanded = true; // Mark as just landed to prevent repeated events
-        
-        // If landing on bottom wall, set a longer cooldown
-        const bottomY = entity.y + (entity.height || 14);
-        const bottomTile = Math.floor(bottomY / this.world.tileSize);
-        const atBottomWall = bottomTile >= (this.world.height - 1);
-        if (atBottomWall) {
-          entity.jumpCooldown = 0.2; // 200ms cooldown when landing on bottom wall
-          entity.jumpLockTime = 0.2; // 200ms lock on bottom wall
-        }
-      }
-      
-      // Clear justLanded flag quickly to allow jumping (after 50ms on ground)
-      if (entity.justLanded && entity.groundStableTime > 0.05) {
+      // Clear justLanded flag if we've been on ground for a while
+      if (entity.justLanded && entity.groundStableTime > 0.1) {
         entity.justLanded = false;
       }
       
@@ -97,18 +62,11 @@ export class PhysicsSystem {
       // Apply gravity
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
       
-      // Apply gravity only if not on ground
-      if (!entity.onGround) {
-        entity.vy += GRAVITY * clampedDt;
-        const maxFallSpeed = 640;
-        if (entity.vy > maxFallSpeed) {
-          entity.vy = maxFallSpeed;
-        }
-      } else {
-        // On ground - zero downward velocity (but allow upward for jumps)
-        if (entity.vy > 0) {
-          entity.vy = 0;
-        }
+      // Always apply gravity (simpler and more reliable)
+      entity.vy += GRAVITY * clampedDt;
+      const maxFallSpeed = 640;
+      if (entity.vy > maxFallSpeed) {
+        entity.vy = maxFallSpeed;
       }
 
       // Move horizontally FIRST
@@ -153,10 +111,11 @@ export class PhysicsSystem {
             entity.onGround = true;
             // CRITICAL: Clear jump buffer and set cooldowns when landing to prevent bounce loops
             // Only process if not already marked as just landed (prevents repeated triggers)
-            if (!entity.justLanded) {
+            if (!wasOnGround && !entity.justLanded) {
               entity.jumpBuffer = 0; // Always clear jump buffer on landing
-              entity.jumpLockTime = 0.1; // 100ms lock after landing to prevent bounce loops
+              entity.jumpLockTime = 0.05; // 50ms lock after landing to prevent bounce loops
               entity.justLanded = true; // Mark as just landed
+              entity.groundStableTime = 0; // Reset stability timer
               // CRITICAL: Set jump cooldown when landing to prevent immediate jump spam
               if (entity.jumpCooldown === undefined) {
                 entity.jumpCooldown = 0;
@@ -167,11 +126,11 @@ export class PhysicsSystem {
               const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
               if (atBottomWall) {
                 // Longer cooldowns on bottom wall to prevent bounce loops
-                entity.jumpCooldown = 0.2; // 200ms cooldown
-                entity.jumpLockTime = 0.2; // 200ms lock
+                entity.jumpCooldown = 0.15; // 150ms cooldown
+                entity.jumpLockTime = 0.1; // 100ms lock
                 entity.onBottomWall = true; // Mark as on bottom wall
               } else {
-                entity.jumpCooldown = 0.15; // 150ms cooldown when landing normally
+                entity.jumpCooldown = 0.1; // 100ms cooldown when landing normally
                 entity.onBottomWall = false; // Clear bottom wall flag
               }
             }
@@ -208,10 +167,11 @@ export class PhysicsSystem {
               entity.onGround = true;
               entity.vy = 0; // Ensure velocity is zero
               // CRITICAL: Clear jump buffer when snapping to ground to prevent bounce loops
-              if (!entity.justLanded) {
+              if (!wasOnGround && !entity.justLanded) {
                 entity.jumpBuffer = 0;
-                entity.jumpLockTime = 0.1; // 100ms lock after snapping to ground
+                entity.jumpLockTime = 0.05; // 50ms lock after snapping to ground
                 entity.justLanded = true; // Mark as just landed
+                entity.groundStableTime = 0; // Reset stability timer
                 entity.vy = 0; // Ensure velocity is zero
               }
               break;
@@ -235,7 +195,7 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, ALWAYS zero velocity to prevent bouncing
+      // CRITICAL: If on ground, zero downward velocity to prevent bouncing
       // This must happen AFTER all movement to ensure no bouncing
       if (entity.onGround && entity.vy > 0) {
         entity.vy = 0; // Zero downward velocity when on ground
@@ -447,9 +407,9 @@ export class PhysicsSystem {
     }
     
     // Jump conditions - prevent loops while allowing normal jumping
-    // CRITICAL: Allow jumping if ground is stable (been on ground for at least 30ms) OR coyote time is active
+    // CRITICAL: Allow jumping if ground is stable (been on ground for at least 20ms) OR coyote time is active
     // The jumpLockTime prevents immediate re-jumping after landing, but doesn't block all jumps
-    const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.03);
+    const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.02);
     // Allow jumping from ground if: (ground is stable AND lock time expired) OR coyote time is active
     // This allows jumping even if justLanded is true, as long as jumpLockTime has expired
     const canJumpFromGround = (groundStable && entity.jumpLockTime <= 0) || entity.coyoteTime > 0;
@@ -476,9 +436,9 @@ export class PhysicsSystem {
       
       // Execute jump
       entity.vy = JUMP_VEL;
-      entity.jumpCooldown = 0.3; // 300ms cooldown
+      entity.jumpCooldown = 0.2; // 200ms cooldown
       entity.jumpBuffer = 0; // Clear buffer after jump
-      entity.jumpLockTime = 0.15; // 150ms lock to prevent immediate re-jumping (prevents bounce loops)
+      entity.jumpLockTime = 0.1; // 100ms lock to prevent immediate re-jumping (prevents bounce loops)
       entity.justLanded = false; // Clear just landed flag when jumping
       entity.coyoteTime = 0;
       entity.lastJumpTime = 0;
