@@ -162,13 +162,24 @@ export class PhysicsSystem {
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
 
       // Final ground state check (after all movement)
-      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
-      // This prevents ground detection from interfering with jumps
-      if (entity.vy >= -100) {
-        entity.onGround = this.isOnGround(entity);
+      // CRITICAL: If on bottom wall, lock ground state to prevent flickering
+      const finalBottomY = entity.y + (entity.height || 14);
+      const finalBottomTile = Math.floor(finalBottomY / this.world.tileSize);
+      const finalAtBottomWall = finalBottomTile >= (this.world.height - 1);
+      
+      if (finalAtBottomWall && entity.onGround) {
+        // Lock ground state when on bottom wall to prevent flickering
+        entity.onGround = true;
       } else {
-        // If jumping up fast, definitely not on ground
-        entity.onGround = false;
+        // Normal ground detection
+        // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+        // This prevents ground detection from interfering with jumps
+        if (entity.vy >= -100) {
+          entity.onGround = this.isOnGround(entity);
+        } else {
+          // If jumping up fast, definitely not on ground
+          entity.onGround = false;
+        }
       }
       
       // If on ground, ensure velocity is zero (but allow upward velocity for jumps)
@@ -176,20 +187,28 @@ export class PhysicsSystem {
         entity.vy = 0;
       }
       
-      // CRITICAL: If entity is at bottom wall, prevent jumping completely
+      // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
       // Check if entity is standing on the bottom row of tiles (tile y = height - 1)
       const bottomY = entity.y + (entity.height || 14);
       const bottomTile = Math.floor(bottomY / this.world.tileSize);
       const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
       
-      if (atBottomWall && entity.onGround) {
-        // Completely disable jumping on bottom wall
+      if (atBottomWall) {
+        // Completely disable jumping on bottom wall - prevent ANY upward velocity
         // Clear jump buffer to prevent any buffered jumps
         entity.jumpBuffer = 0;
         // Force jump cooldown to maximum to prevent any jumping
         entity.jumpCooldown = 999.0; // Effectively infinite cooldown
         // Mark entity as on bottom wall to prevent any jump attempts
         entity.onBottomWall = true;
+        // CRITICAL: Prevent ANY upward velocity when on bottom wall
+        if (entity.vy < 0) {
+          entity.vy = 0; // Cancel any upward movement
+        }
+        // Force ground state to be true when on bottom wall to prevent flickering
+        if (entity.onGround) {
+          entity.onGround = true; // Lock ground state
+        }
       } else {
         // Not on bottom wall - clear the flag
         entity.onBottomWall = false;
@@ -368,6 +387,10 @@ export class PhysicsSystem {
     if (atBottomWall || entity.onBottomWall) {
       // Clear jump buffer and prevent any jump
       entity.jumpBuffer = 0;
+      // Also prevent any upward velocity from being set
+      if (entity.vy < 0) {
+        entity.vy = 0;
+      }
       return false;
     }
     
@@ -378,6 +401,18 @@ export class PhysicsSystem {
                     entity.jumpCooldown <= 0.1; // Extra check: only jump if cooldown is very low
     
     if (entity.jumpBuffer > 0 && canJump) {
+      // CRITICAL: Double-check we're not on bottom wall before allowing jump
+      const bottomY = entity.y + (entity.height || 14);
+      const bottomTile = Math.floor(bottomY / this.world.tileSize);
+      const atBottomWall = bottomTile >= (this.world.height - 1);
+      
+      if (atBottomWall || entity.onBottomWall) {
+        // Still on bottom wall - prevent jump
+        entity.jumpBuffer = 0;
+        entity.vy = Math.max(0, entity.vy); // Ensure no upward velocity
+        return false;
+      }
+      
       entity.vy = JUMP_VEL;
       entity.jumpCooldown = 0.2; // 200ms cooldown between jumps (increased)
       
