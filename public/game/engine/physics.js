@@ -157,6 +157,19 @@ export class PhysicsSystem {
       if (entity.onGround && entity.vy > 0) {
         entity.vy = 0;
       }
+      
+      // CRITICAL: If entity is at bottom wall, prevent jumping for a short time after landing
+      // This prevents jump spam at the bottom of the map
+      const bottomY = entity.y + (entity.height || 14);
+      const worldBottom = this.world.height * this.world.tileSize;
+      const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
+      
+      if (atBottomWall && entity.onGround) {
+        // Ensure jump cooldown is set when at bottom wall to prevent spam
+        if (entity.jumpCooldown === undefined || entity.jumpCooldown <= 0) {
+          entity.jumpCooldown = 0.3; // 300ms cooldown when at bottom wall
+        }
+      }
 
       // Apply wrapping
       const wrapped = wrapPosition(entity.x, entity.y);
@@ -322,14 +335,20 @@ export class PhysicsSystem {
     // 1. Entity is not already moving up fast (prevent double jumps)
     // 2. Jump cooldown has expired (prevent spam)
     // 3. Entity is actually on ground, has coyote time, or is touching wall
+    // 4. Entity is not at the very bottom of the map (prevent bottom wall jump spam)
+    const bottomY = entity.y + (entity.height || 14);
+    const worldBottom = this.world.height * this.world.tileSize;
+    const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
+    
     const canJump = (entity.onGround || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
-                    entity.jumpCooldown <= 0; // Don't jump if on cooldown
+                    entity.jumpCooldown <= 0 && // Don't jump if on cooldown
+                    !atBottomWall; // Don't jump if at bottom wall (prevents spam)
     
     if (entity.jumpBuffer > 0 && canJump) {
       entity.vy = JUMP_VEL;
-      entity.jumpCooldown = 0.15; // 150ms cooldown between jumps
+      entity.jumpCooldown = 0.2; // 200ms cooldown between jumps (increased)
       
       // Wall-jump
       if (!entity.onGround && entity.coyoteTime <= 0 && entity.touchingWall) {

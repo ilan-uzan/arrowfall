@@ -259,7 +259,12 @@ export class NPC {
             // Jump if on ground and just started evading (only once)
             // CRITICAL: Only jump if not already moving up (prevent spam)
             // Also check jump cooldown to prevent spam
-            if (this.onGround && this.stateTimer < 0.1 && this.vy >= -50) {
+            // Don't jump if at bottom wall (prevents spam at bottom)
+            const bottomY = this.y + (this.height || 14);
+            const worldBottom = world.height * world.tileSize;
+            const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
+            
+            if (this.onGround && this.stateTimer < 0.1 && this.vy >= -50 && !atBottomWall) {
               // Initialize jump cooldown if needed
               if (this.jumpCooldown === undefined) {
                 this.jumpCooldown = 0;
@@ -268,7 +273,7 @@ export class NPC {
               // Only jump if cooldown expired
               if (this.jumpCooldown <= 0) {
                 this.vy = -380; // Jump velocity
-                this.jumpCooldown = 0.3; // 300ms cooldown between NPC jumps
+                this.jumpCooldown = 0.4; // 400ms cooldown between NPC jumps (increased)
               }
             }
             
