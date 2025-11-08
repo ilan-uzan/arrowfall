@@ -136,11 +136,8 @@ export class Player {
         this.coyoteTime = 0;
         this.jumpBuffer = 0;
         this.jumpCooldown = 0; // Reset jump cooldown
-        this.landingCooldown = 0; // Reset landing cooldown
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
-        this.groundFlickerCooldown = 0; // Reset ground flicker cooldown
-        this.jumpBufferJustSet = false; // Reset jump buffer just set flag
       }
 
   getBounds() {

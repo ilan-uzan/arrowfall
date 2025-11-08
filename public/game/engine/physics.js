@@ -26,10 +26,7 @@ export class PhysicsSystem {
       if (entity.onBottomWall === undefined) entity.onBottomWall = false;
       if (entity.jumpBuffer === undefined) entity.jumpBuffer = 0;
       if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
-      if (entity.landingCooldown === undefined) entity.landingCooldown = 0; // Prevent jumping immediately after landing
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0; // Time entity has been on ground continuously
-      if (entity.groundFlickerCooldown === undefined) entity.groundFlickerCooldown = 0; // Cooldown after ground state flickering
-      if (entity.jumpBufferJustSet === undefined) entity.jumpBufferJustSet = false; // Flag to track if jump buffer was just set this frame
 
       // Store old ground state
       const wasOnGround = entity.onGround;
