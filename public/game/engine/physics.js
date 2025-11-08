@@ -332,11 +332,15 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, COMPLETELY zero velocity and snap position PERFECTLY
-      if (entity.onGround) {
-        entity.vy = 0; // Completely zero velocity when on ground
-        
-        // Snap position to ground PERFECTLY to prevent floating
+      // CRITICAL: If on ground, only zero downward velocity (allow upward for jumps)
+      // Don't aggressively zero velocity here - let jump logic handle it
+      if (entity.onGround && entity.vy > 0) {
+        // Only zero downward velocity when on ground, allow upward (jumps)
+        entity.vy = 0;
+      }
+      
+      // Snap position to ground if very close, but don't interfere with jumps
+      if (entity.onGround && entity.vy <= 0) {
         const bottomY = entity.y + (entity.height || 14);
         const tileBelow = Math.floor(bottomY / this.world.tileSize);
         const leftTile = Math.floor(entity.x / this.world.tileSize);
@@ -348,10 +352,13 @@ export class PhysicsSystem {
             const distance = bottomY - groundY;
             if (distance > 0 && distance <= 3) {
               entity.y = groundY - (entity.height || 14);
-              entity.vy = 0;
-              // Lock contact briefly to prevent bounce loop (only if not jumping)
-              if (entity.contactLock <= 0 && entity.vy >= 0) {
-                entity.contactLock = 0.01;
+              // Only zero downward velocity, not upward
+              if (entity.vy > 0) {
+                entity.vy = 0;
+              }
+              // Only set contact lock if not already jumping
+              if (entity.vy <= 0 && entity.contactLock <= 0) {
+                entity.contactLock = 0.01; // Very short lock - just 10ms
                 entity.lastContactY = entity.y;
               }
               break;
