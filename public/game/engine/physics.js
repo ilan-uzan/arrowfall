@@ -23,6 +23,7 @@ export class PhysicsSystem {
       if (entity.touchingWall === undefined) {
         entity.touchingWall = { left: false, right: false };
       }
+      if (entity.onBottomWall === undefined) entity.onBottomWall = false;
 
       // Store old ground state
       const wasOnGround = entity.onGround;
@@ -178,11 +179,16 @@ export class PhysicsSystem {
       const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
       
       if (atBottomWall && entity.onGround) {
-        // Force jump cooldown to prevent any jumping on bottom wall
-        // Always maintain at least 1.0 second cooldown when on bottom wall
-        if (entity.jumpCooldown === undefined || entity.jumpCooldown < 1.0) {
-          entity.jumpCooldown = 1.0; // 1000ms cooldown when at bottom wall (increased significantly)
-        }
+        // Completely disable jumping on bottom wall
+        // Clear jump buffer to prevent any buffered jumps
+        entity.jumpBuffer = 0;
+        // Force jump cooldown to maximum to prevent any jumping
+        entity.jumpCooldown = 999.0; // Effectively infinite cooldown
+        // Mark entity as on bottom wall to prevent any jump attempts
+        entity.onBottomWall = true;
+      } else {
+        // Not on bottom wall - clear the flag
+        entity.onBottomWall = false;
       }
 
       // Apply wrapping
@@ -354,11 +360,17 @@ export class PhysicsSystem {
     const bottomTile = Math.floor(bottomY / this.world.tileSize);
     const atBottomWall = bottomTile >= (this.world.height - 1); // On bottom row of tiles
     
+    // CRITICAL: Completely prevent jumping if on bottom wall or marked as on bottom wall
+    if (atBottomWall || entity.onBottomWall) {
+      // Clear jump buffer and prevent any jump
+      entity.jumpBuffer = 0;
+      return false;
+    }
+    
     const canJump = (entity.onGround || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
                     entity.jumpCooldown <= 0 && // Don't jump if on cooldown
-                    !atBottomWall && // Don't jump if at bottom wall (prevents spam)
                     entity.jumpCooldown <= 0.1; // Extra check: only jump if cooldown is very low
     
     if (entity.jumpBuffer > 0 && canJump) {
