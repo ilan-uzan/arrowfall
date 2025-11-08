@@ -33,23 +33,13 @@ export class PhysicsSystem {
       // Store old ground state
       const wasOnGround = entity.onGround;
       
-      // CRITICAL: Only check ground state if we're not already on ground and not moving up fast
-      // This prevents ground detection flickering
-      if (!entity.onGround && (entity.vy === undefined || entity.vy >= -50)) {
-        // Check ground state BEFORE movement
-        // CRITICAL: If on bottom wall, lock ground state to prevent flickering
-        const initialBottomY = entity.y + (entity.height || 14);
-        const initialBottomTile = Math.floor(initialBottomY / this.world.tileSize);
-        const initialAtBottomWall = initialBottomTile >= (this.world.height - 1);
-        
-        if (initialAtBottomWall) {
-          // Lock ground state when on bottom wall to prevent flickering
-          entity.onGround = true;
-        } else {
-          // Normal ground detection
-          entity.onGround = this.isOnGround(entity);
-        }
-      } else if (entity.vy < -50) {
+      // Check ground state BEFORE movement
+      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+      // This prevents false ground detection during jumps
+      if (entity.vy === undefined || entity.vy >= -50) {
+        // Normal ground detection - always check
+        entity.onGround = this.isOnGround(entity);
+      } else {
         // If jumping up fast, definitely not on ground
         entity.onGround = false;
       }
@@ -104,20 +94,20 @@ export class PhysicsSystem {
         entity.justLanded = false;
       }
 
-      // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
+      // Apply gravity
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
       
-      // CRITICAL: If on ground, ALWAYS zero velocity to prevent bouncing
-      // This must happen BEFORE movement to prevent any upward velocity from causing bouncing
-      if (entity.onGround) {
-        // On ground - ALWAYS zero velocity (prevents bouncing)
-        entity.vy = 0;
-      } else {
-        // Not on ground - apply gravity
+      // Apply gravity only if not on ground
+      if (!entity.onGround) {
         entity.vy += GRAVITY * clampedDt;
         const maxFallSpeed = 640;
         if (entity.vy > maxFallSpeed) {
           entity.vy = maxFallSpeed;
+        }
+      } else {
+        // On ground - zero downward velocity (but allow upward for jumps)
+        if (entity.vy > 0) {
+          entity.vy = 0;
         }
       }
 
@@ -235,29 +225,20 @@ export class PhysicsSystem {
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
 
       // Final ground state check (after all movement)
-      // CRITICAL: Only update ground state if we're not already on ground and not moving up fast
-      // This prevents ground detection flickering
-      if (!entity.onGround && entity.vy >= -100) {
-        const finalBottomY = entity.y + (entity.height || 14);
-        const finalBottomTile = Math.floor(finalBottomY / this.world.tileSize);
-        const finalAtBottomWall = finalBottomTile >= (this.world.height - 1);
-        
-        if (finalAtBottomWall) {
-          // Lock ground state when on bottom wall to prevent flickering
-          entity.onGround = true;
-        } else {
-          // Normal ground detection
-          entity.onGround = this.isOnGround(entity);
-        }
-      } else if (entity.vy < -100) {
+      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+      // This prevents ground detection from interfering with jumps
+      if (entity.vy >= -100) {
+        // Normal ground detection - always check
+        entity.onGround = this.isOnGround(entity);
+      } else {
         // If jumping up fast, definitely not on ground
         entity.onGround = false;
       }
       
       // CRITICAL: If on ground, ALWAYS zero velocity to prevent bouncing
       // This must happen AFTER all movement to ensure no bouncing
-      if (entity.onGround) {
-        entity.vy = 0; // Always zero velocity when on ground
+      if (entity.onGround && entity.vy > 0) {
+        entity.vy = 0; // Zero downward velocity when on ground
       }
       
           // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
@@ -315,20 +296,7 @@ export class PhysicsSystem {
     const width = entity.width || 12;
     const height = entity.height || 14;
     
-    // CRITICAL: Check if at bottom wall - if so, only return true if actually on ground
     const bottomY = y + height;
-    const bottomTile = Math.floor(bottomY / this.world.tileSize);
-    const atBottomWall = bottomTile >= (this.world.height - 1);
-    
-    // If at bottom wall, use stricter ground detection
-    if (atBottomWall) {
-      // Only consider on ground if very close to the bottom wall (within 1 pixel)
-      const groundY = (this.world.height - 1) * this.world.tileSize;
-      const distanceToGround = bottomY - groundY;
-      return distanceToGround >= -1 && distanceToGround <= 1;
-    }
-    
-    // Normal ground detection - stricter tolerance (2 pixels instead of 4)
     const leftTile = Math.floor(x / this.world.tileSize);
     const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
     const tileBelow = Math.floor(bottomY / this.world.tileSize);
@@ -337,8 +305,8 @@ export class PhysicsSystem {
       if (this.world.isSolid(tx, tileBelow)) {
         const groundY = tileBelow * this.world.tileSize;
         const distanceToGround = bottomY - groundY;
-        // Stricter tolerance - only within 2 pixels
-        if (distanceToGround >= -2 && distanceToGround <= 2) {
+        // Check if we're close enough to the ground (within 4 pixels for tolerance)
+        if (distanceToGround >= -4 && distanceToGround <= 4) {
           return true;
         }
       }
