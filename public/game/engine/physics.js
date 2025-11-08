@@ -33,6 +33,15 @@ export class PhysicsSystem {
       // Store old ground state
       const wasOnGround = entity.onGround;
       
+      // CRITICAL: Check ground state BEFORE applying gravity to prevent bouncing
+      // Don't check ground if entity is moving up fast (jumping)
+      if (entity.vy === undefined || entity.vy >= -50) {
+        entity.onGround = this.isOnGround(entity);
+      } else {
+        // If jumping up fast, definitely not on ground
+        entity.onGround = false;
+      }
+      
       // Update coyote time
       if (wasOnGround && !entity.onGround) {
         entity.coyoteTime = COYOTE_MS / 1000;
@@ -70,13 +79,20 @@ export class PhysicsSystem {
           entity.vy = maxFallSpeed;
         }
       } else {
-        // On ground - ensure velocity is zero to prevent bouncing
-        if (entity.vy > 0) {
-          entity.vy = 0;
-        }
+        // On ground - ALWAYS zero velocity to prevent bouncing
+        entity.vy = 0;
       }
 
       // Move horizontally FIRST
+      // CRITICAL: Check wall touching state BEFORE movement to prevent bouncing
+      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
+      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
+      
+      // CRITICAL: If touching wall, zero velocity BEFORE movement to prevent bouncing
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0;
+      }
+      
       if (entity.vx !== 0) {
         const moveX = entity.vx * clampedDt;
         const newX = entity.x + moveX;
@@ -97,8 +113,9 @@ export class PhysicsSystem {
           entity.vx = 0;
         } else {
           entity.x = newX;
-          entity.touchingWall.left = false;
-          entity.touchingWall.right = false;
+          // Update wall touching state after movement
+          entity.touchingWall.left = this.isTouchingWall(entity, 'left');
+          entity.touchingWall.right = this.isTouchingWall(entity, 'right');
         }
       }
       
@@ -194,10 +211,6 @@ export class PhysicsSystem {
         }
       }
 
-      // Update wall touching state
-      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
-      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-
       // Final ground state check (after all movement)
       // CRITICAL: Don't check ground if entity is moving up fast (jumping)
       // This prevents ground detection from interfering with jumps
@@ -209,12 +222,12 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, ALWAYS zero downward velocity to prevent bouncing
+      // CRITICAL: If on ground, ALWAYS zero downward velocity and snap position to prevent bouncing
       // This must happen AFTER all movement to ensure no bouncing
       if (entity.onGround) {
-        if (entity.vy > 0) {
-          entity.vy = 0; // Zero downward velocity when on ground
-        }
+        // ALWAYS zero velocity when on ground to prevent bouncing
+        entity.vy = 0;
+        
         // Also ensure position is snapped to ground to prevent floating
         const bottomY = entity.y + (entity.height || 14);
         const tileBelow = Math.floor(bottomY / this.world.tileSize);
@@ -225,8 +238,8 @@ export class PhysicsSystem {
           if (this.world.isSolid(tx, tileBelow)) {
             const groundY = tileBelow * this.world.tileSize;
             const distance = bottomY - groundY;
-            // Snap to ground if very close (within 2 pixels)
-            if (distance > 0 && distance <= 2) {
+            // Snap to ground if very close (within 3 pixels) to prevent any gap
+            if (distance > 0 && distance <= 3) {
               entity.y = groundY - (entity.height || 14);
               entity.vy = 0;
               break;
@@ -235,7 +248,9 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: If touching wall, ensure horizontal velocity is zero to prevent bouncing
+      // CRITICAL: Final check - if touching wall, ensure horizontal velocity is zero to prevent bouncing
+      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
+      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       if (entity.touchingWall.left || entity.touchingWall.right) {
         entity.vx = 0;
       }
