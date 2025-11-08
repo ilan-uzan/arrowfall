@@ -20,34 +20,50 @@ export class SurvivalScene {
 
   enter() {
     try {
-      // Validate world and spawns exist
-      if (!this.game.world || !this.game.world.spawns) {
-        console.error('World or spawns missing!');
+      // Validate game, world, and physics exist
+      if (!this.game || !this.game.world || !this.game.physics) {
+        console.error('Game, world, or physics missing!', {
+          game: !!this.game,
+          world: !!this.game?.world,
+          physics: !!this.game?.physics
+        });
         return;
       }
+      
+      // Ensure world has spawns
+      if (!this.game.world.spawns) {
+        this.game.world.spawns = this.game.world.createSpawnPoints();
+      }
+      
+      // Reset state
+      this.player = null;
+      this.npcs = [];
+      this.arrows = [];
+      this.wave = 1;
+      this.countdown = 3.0;
+      this.countdownText = '3';
+      this.roundActive = false;
       
       // Create player with safe spawn access
       const spawn = this.game.world.spawns.p1 || { x: 32, y: 114 };
       this.player = new Player(spawn.x, spawn.y, 1, PLAYER_COLORS[0], this.game.physics);
       
       // Bind first gamepad to player
-      this.game.inputRouter.update();
-      const gamepads = this.game.inputRouter.getAllGamepads();
-      if (gamepads.length > 0) {
-        this.game.inputRouter.bindGamepad(1, gamepads[0].index);
+      if (this.game.inputRouter) {
+        this.game.inputRouter.update();
+        const gamepads = this.game.inputRouter.getAllGamepads();
+        if (gamepads.length > 0) {
+          this.game.inputRouter.bindGamepad(1, gamepads[0].index);
+        }
       }
       
       // Create NPCs
       this.spawnWave();
       
-      // Countdown
-      this.countdown = 3.0;
-      this.countdownText = '3';
-      this.roundActive = false;
-      
-      console.log('Survival scene entered');
+      console.log('Survival scene entered successfully');
     } catch (error) {
       console.error('Error entering survival scene:', error);
+      console.error('Error stack:', error.stack);
     }
   }
 
@@ -56,9 +72,14 @@ export class SurvivalScene {
       this.npcs = [];
       
       // Validate world and spawns exist
-      if (!this.game.world || !this.game.world.spawns) {
-        console.error('World or spawns missing in spawnWave!');
+      if (!this.game || !this.game.world || !this.game.physics) {
+        console.error('Game, world, or physics missing in spawnWave!');
         return;
+      }
+      
+      // Ensure world has spawns
+      if (!this.game.world.spawns) {
+        this.game.world.spawns = this.game.world.createSpawnPoints();
       }
       
       const spawn1 = this.game.world.spawns.npc1 || { x: 96, y: 114 };
@@ -74,6 +95,7 @@ export class SurvivalScene {
       this.arrows = [];
     } catch (error) {
       console.error('Error spawning wave:', error);
+      console.error('Error stack:', error.stack);
     }
   }
 

@@ -46,6 +46,7 @@ export class NPC {
     this.arrowCheckTimer = 0;
     this.wave = 1;
     this.physics = physics;
+    this.jumpCooldown = 0; // Initialize jump cooldown
   }
 
   setWave(wave) {
@@ -257,29 +258,12 @@ export class NPC {
         this.facing = this.patrolDirection;
         
             // Jump if on ground and just started evading (only once)
-            // CRITICAL: Only jump if not already moving up (prevent spam)
-            // Also check jump cooldown to prevent spam
-            // Don't jump if at bottom wall (prevents spam at bottom)
-            const bottomY = this.y + (this.height || 14);
-            const worldBottom = world.height * world.tileSize;
-            const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
-            
-            if (this.onGround && this.stateTimer < 0.1 && this.vy >= -50 && !atBottomWall) {
-              // Initialize jump cooldown if needed
-              if (this.jumpCooldown === undefined) {
-                this.jumpCooldown = 0;
+            // CRITICAL: Use physics system's applyJump to respect all jump checks
+            if (this.onGround && this.stateTimer < 0.1) {
+              // Use physics system's applyJump method - it handles all checks including bottom wall
+              if (this.physics && this.physics.applyJump) {
+                this.physics.applyJump(this, true);
               }
-              
-              // Only jump if cooldown expired
-              if (this.jumpCooldown <= 0) {
-                this.vy = -380; // Jump velocity
-                this.jumpCooldown = 0.4; // 400ms cooldown between NPC jumps (increased)
-              }
-            }
-            
-            // Decrease jump cooldown
-            if (this.jumpCooldown !== undefined && this.jumpCooldown > 0) {
-              this.jumpCooldown -= dt;
             }
         
         // Return to patrol after evading (150^2 = 22500)
@@ -337,29 +321,13 @@ export class NPC {
         }
         
             // Jump if needed to reach arrow (only if not already jumping)
-            // CRITICAL: Only jump if not already moving up (prevent spam)
-            // Don't jump if at bottom wall (prevents spam at bottom)
-            const bottomY = this.y + (this.height || 14);
-            const worldBottom = world.height * world.tileSize;
-            const atBottomWall = bottomY >= worldBottom - 2; // Within 2 pixels of bottom wall
-            
-            if (this.onGround && targetDy < -20 && this.stateTimer > 0.2 && this.vy >= -50 && !atBottomWall) {
-              // Initialize jump cooldown if needed
-              if (this.jumpCooldown === undefined) {
-                this.jumpCooldown = 0;
-              }
-              
-              // Only jump if cooldown expired
-              if (this.jumpCooldown <= 0) {
-                this.vy = -380;
+            // CRITICAL: Use physics system's applyJump to respect all jump checks
+            if (this.onGround && targetDy < -20 && this.stateTimer > 0.2) {
+              // Use physics system's applyJump method - it handles all checks including bottom wall
+              if (this.physics && this.physics.applyJump) {
+                this.physics.applyJump(this, true);
                 this.stateTimer = 0;
-                this.jumpCooldown = 0.4; // 400ms cooldown between NPC jumps (increased)
               }
-            }
-            
-            // Decrease jump cooldown
-            if (this.jumpCooldown !== undefined && this.jumpCooldown > 0) {
-              this.jumpCooldown -= dt;
             }
         
         // Check if arrow reached (24^2 = 576 for easier pickup)
