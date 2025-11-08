@@ -138,6 +138,7 @@ export class Player {
         this.landingCooldown = 0; // Reset landing cooldown
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
+        this.groundFlickerCooldown = 0; // Reset ground flicker cooldown
       }
 
   getBounds() {

@@ -43,11 +43,12 @@ export class NPC {
     this.aimJitter = 8;
     this.lastShootTime = 0;
     this.shootCooldown = 1.5;
-    this.arrowCheckTimer = 0;
-    this.wave = 1;
-    this.physics = physics;
-    this.jumpCooldown = 0; // Initialize jump cooldown
-  }
+        this.arrowCheckTimer = 0;
+        this.wave = 1;
+        this.physics = physics;
+        this.jumpCooldown = 0; // Initialize jump cooldown
+        this.jumpAttempted = false; // Track if jump was already attempted this frame/state
+      }
 
   setWave(wave) {
     this.wave = wave;
@@ -147,16 +148,19 @@ export class NPC {
     let newArrow = null;
     
     switch (this.state) {
-      case NPC_STATE.PATROL:
-        // Simple patrol: move back and forth independently
-        const speed = MAX_VEL_X * 0.7 * (1 + this.wave * 0.04); // Scale with wave
-        
-        // Ensure patrolDirection is valid (1 or -1, not 0)
-        if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
-          this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
-        }
-        
-        const targetVx = this.patrolDirection * speed;
+          case NPC_STATE.PATROL:
+            // Reset jump attempted flag when entering patrol
+            this.jumpAttempted = false;
+            
+            // Simple patrol: move back and forth independently
+            const speed = MAX_VEL_X * 0.7 * (1 + this.wave * 0.04); // Scale with wave
+            
+            // Ensure patrolDirection is valid (1 or -1, not 0)
+            if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
+              this.patrolDirection = Math.random() > 0.5 ? 1 : -1;
+            }
+            
+            const targetVx = this.patrolDirection * speed;
         
         // Validate targetVx
         if (isNaN(targetVx) || !isFinite(targetVx)) {
@@ -234,11 +238,16 @@ export class NPC {
         this.stateTimer = 0;
         break;
 
-      case NPC_STATE.EVADE:
-        // Jump away from player - ensure patrolDirection is valid
-        if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
-          this.patrolDirection = dx > 0 ? -1 : 1;
-        }
+          case NPC_STATE.EVADE:
+            // Reset jump attempted flag when entering evade (allows one jump per evade)
+            if (this.stateTimer < 0.05) {
+              this.jumpAttempted = false;
+            }
+            
+            // Jump away from player - ensure patrolDirection is valid
+            if (this.patrolDirection === 0 || isNaN(this.patrolDirection)) {
+              this.patrolDirection = dx > 0 ? -1 : 1;
+            }
         
         const evadeSpeed = this.patrolDirection * MAX_VEL_X * 0.8;
         
@@ -257,12 +266,16 @@ export class NPC {
         
         this.facing = this.patrolDirection;
         
-            // Jump if on ground and just started evading (only once)
+            // Jump if on ground and just started evading (only once per evade)
             // CRITICAL: Use physics system's applyJump to respect all jump checks
-            if (this.onGround && this.stateTimer < 0.1) {
+            // Only attempt jump once per evade state to prevent spam from ground flickering
+            if (this.onGround && this.stateTimer < 0.1 && !this.jumpAttempted) {
               // Use physics system's applyJump method - it handles all checks including bottom wall
               if (this.physics && this.physics.applyJump) {
-                this.physics.applyJump(this, true);
+                const jumped = this.physics.applyJump(this, true);
+                if (jumped) {
+                  this.jumpAttempted = true; // Mark jump as attempted
+                }
               }
             }
         
@@ -275,9 +288,14 @@ export class NPC {
         }
         break;
 
-      case NPC_STATE.RETRIEVE:
-        // Find arrow again (might have moved or been picked up)
-        let currentNearestArrow = null;
+          case NPC_STATE.RETRIEVE:
+            // Reset jump attempted flag when entering retrieve (allows one jump per retrieve)
+            if (this.stateTimer < 0.05) {
+              this.jumpAttempted = false;
+            }
+            
+            // Find arrow again (might have moved or been picked up)
+            let currentNearestArrow = null;
         let currentNearestDistSq = 25000;
         
         for (const arrow of arrows) {
@@ -322,11 +340,15 @@ export class NPC {
         
             // Jump if needed to reach arrow (only if not already jumping)
             // CRITICAL: Use physics system's applyJump to respect all jump checks
-            if (this.onGround && targetDy < -20 && this.stateTimer > 0.2) {
+            // Only attempt jump once per retrieve attempt to prevent spam from ground flickering
+            if (this.onGround && targetDy < -20 && this.stateTimer > 0.2 && !this.jumpAttempted) {
               // Use physics system's applyJump method - it handles all checks including bottom wall
               if (this.physics && this.physics.applyJump) {
-                this.physics.applyJump(this, true);
-                this.stateTimer = 0;
+                const jumped = this.physics.applyJump(this, true);
+                if (jumped) {
+                  this.jumpAttempted = true; // Mark jump as attempted
+                  this.stateTimer = 0;
+                }
               }
             }
         
@@ -390,6 +412,8 @@ export class NPC {
         this.landingCooldown = 0; // Reset landing cooldown
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
+        this.groundFlickerCooldown = 0; // Reset ground flicker cooldown
+        this.jumpAttempted = false; // Reset jump attempted flag
         this.state = NPC_STATE.PATROL;
         this.stateTimer = 0;
         // Reset patrol direction independently - alternate based on ID to ensure variety

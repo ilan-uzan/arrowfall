@@ -28,6 +28,7 @@ export class PhysicsSystem {
       if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
       if (entity.landingCooldown === undefined) entity.landingCooldown = 0; // Prevent jumping immediately after landing
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0; // Time entity has been on ground continuously
+      if (entity.groundFlickerCooldown === undefined) entity.groundFlickerCooldown = 0; // Cooldown after ground state flickering
 
       // Store old ground state
       const wasOnGround = entity.onGround;
@@ -88,6 +89,13 @@ export class PhysicsSystem {
         // Ground state changed - if we were on ground and now we're not, or vice versa
         // Clear jump buffer to prevent stuck state
         entity.jumpBuffer = 0;
+        // Set a short cooldown to prevent immediate jump attempts during flickering
+        entity.groundFlickerCooldown = 0.1; // 100ms cooldown after ground state change
+      }
+      
+      // Update ground flicker cooldown
+      if (entity.groundFlickerCooldown > 0) {
+        entity.groundFlickerCooldown -= dt;
       }
 
       // Apply gravity ONLY if not on ground (prevents bouncing when on ground)
@@ -477,7 +485,11 @@ export class PhysicsSystem {
     // This prevents jumping when ground detection is flickering
     const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.05);
     
-    const canJump = (groundStable || entity.coyoteTime > 0 || 
+    // CRITICAL: Don't allow jump if ground is flickering (recent ground state change)
+    const groundFlickering = entity.groundFlickerCooldown !== undefined && entity.groundFlickerCooldown > 0;
+    
+    const canJump = !groundFlickering && // Don't jump if ground is flickering
+                    (groundStable || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
                     entity.jumpCooldown <= 0 && // Don't jump if on cooldown
@@ -511,9 +523,9 @@ export class PhysicsSystem {
       
       entity.jumpBuffer = 0;
       entity.coyoteTime = 0;
-      return true;
+      return true; // Jump succeeded
     }
-    return false;
+    return false; // Jump did not occur
   }
 
   applyWallSlide(entity, holdingLeft, holdingRight) {
