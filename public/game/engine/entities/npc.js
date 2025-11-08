@@ -258,8 +258,23 @@ export class NPC {
         
             // Jump if on ground and just started evading (only once)
             // CRITICAL: Only jump if not already moving up (prevent spam)
+            // Also check jump cooldown to prevent spam
             if (this.onGround && this.stateTimer < 0.1 && this.vy >= -50) {
-              this.vy = -380; // Jump velocity
+              // Initialize jump cooldown if needed
+              if (this.jumpCooldown === undefined) {
+                this.jumpCooldown = 0;
+              }
+              
+              // Only jump if cooldown expired
+              if (this.jumpCooldown <= 0) {
+                this.vy = -380; // Jump velocity
+                this.jumpCooldown = 0.3; // 300ms cooldown between NPC jumps
+              }
+            }
+            
+            // Decrease jump cooldown
+            if (this.jumpCooldown !== undefined && this.jumpCooldown > 0) {
+              this.jumpCooldown -= dt;
             }
         
         // Return to patrol after evading (150^2 = 22500)
@@ -319,8 +334,22 @@ export class NPC {
             // Jump if needed to reach arrow (only if not already jumping)
             // CRITICAL: Only jump if not already moving up (prevent spam)
             if (this.onGround && targetDy < -20 && this.stateTimer > 0.2 && this.vy >= -50) {
-              this.vy = -380;
-              this.stateTimer = 0;
+              // Initialize jump cooldown if needed
+              if (this.jumpCooldown === undefined) {
+                this.jumpCooldown = 0;
+              }
+              
+              // Only jump if cooldown expired
+              if (this.jumpCooldown <= 0) {
+                this.vy = -380;
+                this.stateTimer = 0;
+                this.jumpCooldown = 0.3; // 300ms cooldown between NPC jumps
+              }
+            }
+            
+            // Decrease jump cooldown
+            if (this.jumpCooldown !== undefined && this.jumpCooldown > 0) {
+              this.jumpCooldown -= dt;
             }
         
         // Check if arrow reached (24^2 = 576 for easier pickup)

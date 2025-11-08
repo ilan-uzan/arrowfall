@@ -28,7 +28,14 @@ export class PhysicsSystem {
       const wasOnGround = entity.onGround;
       
       // Check ground state BEFORE movement
-      entity.onGround = this.isOnGround(entity);
+      // CRITICAL: Don't check ground if entity is moving up fast (jumping)
+      // This prevents false ground detection during jumps
+      if (entity.vy === undefined || entity.vy >= -50) {
+        entity.onGround = this.isOnGround(entity);
+      } else {
+        // If jumping up fast, definitely not on ground
+        entity.onGround = false;
+      }
       
       // Update coyote time
       if (wasOnGround && !entity.onGround) {
@@ -292,6 +299,16 @@ export class PhysicsSystem {
       entity.jumpBuffer = 0;
     }
     
+    // Initialize jump cooldown if needed (prevents spam)
+    if (entity.jumpCooldown === undefined) {
+      entity.jumpCooldown = 0;
+    }
+    
+    // Decrease jump cooldown
+    if (entity.jumpCooldown > 0) {
+      entity.jumpCooldown -= FIXED_DT;
+    }
+    
     // Jump buffer - only set on new press
     if (jumpPressed && entity.jumpBuffer <= 0) {
       entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
@@ -301,13 +318,18 @@ export class PhysicsSystem {
     }
 
     // Can jump from ground, coyote time, or wall
-    // CRITICAL: Only allow jump if entity is not already moving up (prevent double jumps)
+    // CRITICAL: Only allow jump if:
+    // 1. Entity is not already moving up fast (prevent double jumps)
+    // 2. Jump cooldown has expired (prevent spam)
+    // 3. Entity is actually on ground, has coyote time, or is touching wall
     const canJump = (entity.onGround || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
-                    entity.vy >= -50; // Don't jump if already moving up fast (prevent spam)
+                    entity.vy >= -50 && // Don't jump if already moving up fast
+                    entity.jumpCooldown <= 0; // Don't jump if on cooldown
     
     if (entity.jumpBuffer > 0 && canJump) {
       entity.vy = JUMP_VEL;
+      entity.jumpCooldown = 0.15; // 150ms cooldown between jumps
       
       // Wall-jump
       if (!entity.onGround && entity.coyoteTime <= 0 && entity.touchingWall) {

@@ -125,16 +125,17 @@ export class Player {
     this.vy = 0;
   }
 
-  respawn(x, y) {
-    this.x = x;
-    this.y = y;
-    this.vx = 0;
-    this.vy = 0;
-    this.dead = false;
-    this.arrows = START_ARROWS;
-    this.coyoteTime = 0;
-    this.jumpBuffer = 0;
-  }
+      respawn(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.dead = false;
+        this.arrows = START_ARROWS;
+        this.coyoteTime = 0;
+        this.jumpBuffer = 0;
+        this.jumpCooldown = 0; // Reset jump cooldown
+      }
 
   getBounds() {
     return {
