@@ -26,6 +26,7 @@ export class PhysicsSystem {
       if (entity.onBottomWall === undefined) entity.onBottomWall = false;
       if (entity.jumpBuffer === undefined) entity.jumpBuffer = 0;
       if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
+      if (entity.jumpLockTime === undefined) entity.jumpLockTime = 0; // Lock to prevent rapid re-jumping
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0; // Time entity has been on ground continuously
 
       // Store old ground state
@@ -74,17 +75,22 @@ export class PhysicsSystem {
       }
       
       // CRITICAL: Clear jump buffer when landing to prevent stuck jump state
+      // BUT: Only clear if buffer is old (prevents clearing valid user input)
       if (!wasOnGround && entity.onGround) {
-        // Just landed - clear jump buffer
-        entity.jumpBuffer = 0;
+        // Just landed - clear old jump buffer (but preserve recent input)
+        // Only clear if buffer is small (meaning it was set a while ago)
+        if (entity.jumpBuffer < 0.05) {
+          entity.jumpBuffer = 0;
+        }
         entity.groundStableTime = 0; // Reset stability timer on landing
         
-        // If landing on bottom wall, set a longer cooldown
+        // If landing on bottom wall, set a cooldown to prevent loops
         const bottomY = entity.y + (entity.height || 14);
         const bottomTile = Math.floor(bottomY / this.world.tileSize);
         const atBottomWall = bottomTile >= (this.world.height - 1);
         if (atBottomWall) {
-          entity.jumpCooldown = 0.5; // 500ms cooldown when landing on bottom wall
+          entity.jumpCooldown = 0.3; // 300ms cooldown when landing on bottom wall
+          entity.jumpLockTime = 0.2; // 200ms lock to prevent immediate jumping
         }
       }
 
@@ -416,20 +422,33 @@ export class PhysicsSystem {
     if (entity.jumpBuffer === undefined) entity.jumpBuffer = 0;
     if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
     if (entity.lastJumpTime === undefined) entity.lastJumpTime = -1;
+    if (entity.jumpLockTime === undefined) entity.jumpLockTime = 0; // Prevent rapid re-jumping
     
-    // CRITICAL: Check if entity is at bottom wall FIRST - completely disable jumping
+    // Update jump lock time (prevents involuntary jump loops)
+    if (entity.jumpLockTime > 0) {
+      entity.jumpLockTime -= FIXED_DT;
+    }
+    
+    // CRITICAL: Check if entity is at bottom wall - prevent jumping but allow normal movement
     const bottomY = entity.y + (entity.height || 14);
     const bottomTile = Math.floor(bottomY / this.world.tileSize);
     const atBottomWall = bottomTile >= (this.world.height - 1);
     
     if (atBottomWall) {
-      // On bottom wall - completely disable jumping
-      entity.jumpBuffer = 0;
-      entity.jumpCooldown = 999.0; // Infinite cooldown
-      if (entity.vy < 0) {
-        entity.vy = 0; // Cancel any upward velocity
+      // On bottom wall - prevent jumping but don't interfere with normal movement
+      // Only clear jump buffer if it wasn't just set (preserve user intent)
+      if (entity.jumpBuffer > 0.05) {
+        entity.jumpBuffer = 0;
       }
-      return false;
+      // Set a cooldown to prevent spam, but allow normal jumping after leaving bottom wall
+      if (entity.jumpCooldown < 0.2) {
+        entity.jumpCooldown = 0.2;
+      }
+      // Cancel upward velocity only if we're actually on the bottom wall
+      if (entity.vy < 0 && entity.onGround) {
+        entity.vy = 0;
+      }
+      // Don't return false here - allow the jump buffer to persist for when entity leaves bottom wall
     }
     
     // Update jump cooldown
@@ -437,9 +456,14 @@ export class PhysicsSystem {
       entity.jumpCooldown -= FIXED_DT;
     }
     
-    // Simple jump buffer - only set on new press
+    // Jump buffer - only set on NEW press (prevents involuntary loops)
+    // CRITICAL: Only set buffer if jumpPressed is true AND buffer is empty
+    // This prevents NPCs from setting buffer every frame
     if (jumpPressed && entity.jumpBuffer <= 0) {
-      entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      // Only set buffer if not locked (prevents loops)
+      if (entity.jumpLockTime <= 0) {
+        entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
+      }
     }
     
     // Decrement jump buffer
@@ -447,15 +471,17 @@ export class PhysicsSystem {
       entity.jumpBuffer -= FIXED_DT;
     }
     
-    // Simple jump conditions - no complex checks
+    // Jump conditions - prevent loops while allowing normal jumping
     const canJump = entity.jumpBuffer > 0 && // Has jump buffer
                     entity.jumpCooldown <= 0 && // Not on cooldown
+                    entity.jumpLockTime <= 0 && // Not locked (prevents loops)
                     entity.vy >= -100 && // Not already jumping up fast
+                    !atBottomWall && // Not on bottom wall
                     (entity.onGround || entity.coyoteTime > 0 || 
                      (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))); // Can jump from ground, coyote, or wall
     
     if (canJump) {
-      // Final check - make absolutely sure we're not on bottom wall
+      // Final check - make sure we're not on bottom wall
       const finalBottomY = entity.y + (entity.height || 14);
       const finalBottomTile = Math.floor(finalBottomY / this.world.tileSize);
       const finalAtBottomWall = finalBottomTile >= (this.world.height - 1);
@@ -470,6 +496,7 @@ export class PhysicsSystem {
       entity.vy = JUMP_VEL;
       entity.jumpCooldown = 0.3; // 300ms cooldown
       entity.jumpBuffer = 0;
+      entity.jumpLockTime = 0.15; // 150ms lock to prevent immediate re-jumping (prevents loops)
       entity.coyoteTime = 0;
       entity.lastJumpTime = 0;
       
