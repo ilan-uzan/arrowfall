@@ -39,45 +39,42 @@ export class PhysicsSystem {
       // This prevents bouncing by detecting collisions before movement
       const currentCollision = this.hasCollision(entity.x, entity.y, entity.width || 12, entity.height || 14);
       
-      // If already in collision, snap position and zero velocity
+      // If already in collision, snap position and zero velocity IMMEDIATELY
       if (currentCollision) {
-        // Snap to nearest valid position
+        // Get tile positions
         const leftTile = Math.floor(entity.x / this.world.tileSize);
         const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
         const topTile = Math.floor(entity.y / this.world.tileSize);
         const bottomTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
         
-        // Check which side is colliding and snap accordingly
-        let snapped = false;
-        
-        // Check horizontal collision
+        // Check horizontal collision - snap to wall
         for (let ty = topTile; ty <= bottomTile; ty++) {
           if (this.world.isSolid(leftTile, ty)) {
+            // Touching left wall - snap to right side of wall
             entity.x = (leftTile + 1) * this.world.tileSize;
             entity.touchingWall.left = true;
             entity.vx = 0;
-            snapped = true;
           }
           if (this.world.isSolid(rightTile, ty)) {
+            // Touching right wall - snap to left side of wall
             entity.x = rightTile * this.world.tileSize - (entity.width || 12);
             entity.touchingWall.right = true;
             entity.vx = 0;
-            snapped = true;
           }
         }
         
-        // Check vertical collision
+        // Check vertical collision - snap to floor/ceiling
         for (let tx = leftTile; tx <= rightTile; tx++) {
           if (this.world.isSolid(tx, topTile)) {
+            // Touching ceiling - snap below ceiling
             entity.y = (topTile + 1) * this.world.tileSize;
             entity.vy = 0;
-            snapped = true;
           }
           if (this.world.isSolid(tx, bottomTile)) {
+            // Touching floor - snap on top of floor
             entity.y = bottomTile * this.world.tileSize - (entity.height || 14);
             entity.vy = 0;
             entity.onGround = true;
-            snapped = true;
           }
         }
       }
@@ -129,28 +126,24 @@ export class PhysicsSystem {
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       
-      // CRITICAL: If touching wall, COMPLETELY zero velocity in that direction
-      // This prevents ANY movement into the wall
-      if (entity.touchingWall.left) {
-        entity.vx = 0; // Completely zero velocity when touching left wall
-      }
-      if (entity.touchingWall.right) {
-        entity.vx = 0; // Completely zero velocity when touching right wall
-      }
-      
-      // Only move if not touching any wall
-      if (!entity.touchingWall.left && !entity.touchingWall.right && entity.vx !== 0) {
+      // CRITICAL: If touching wall, COMPLETELY zero velocity and prevent movement
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0; // Completely zero velocity when touching any wall
+      } else if (entity.vx !== 0) {
+        // Only move if not touching any wall
         const moveX = entity.vx * clampedDt;
         const newX = entity.x + moveX;
         
         // Check horizontal collision at new position
         if (this.hasCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
-          // Hit wall - snap to wall and zero velocity
+          // Hit wall - snap to wall and zero velocity IMMEDIATELY
           if (moveX > 0) {
+            // Moving right - hit right wall
             const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
             entity.x = rightTile * this.world.tileSize - (entity.width || 12);
             entity.touchingWall.right = true;
           } else {
+            // Moving left - hit left wall
             const leftTile = Math.floor(entity.x / this.world.tileSize);
             entity.x = (leftTile + 1) * this.world.tileSize;
             entity.touchingWall.left = true;
@@ -172,19 +165,17 @@ export class PhysicsSystem {
       }
 
       // Move vertically SECOND
-      // CRITICAL: If on ground, COMPLETELY zero downward velocity
+      // CRITICAL: If on ground, COMPLETELY zero velocity and prevent movement
       if (entity.onGround) {
         entity.vy = 0; // Completely zero velocity when on ground
-      }
-      
-      // Only move if not on ground
-      if (!entity.onGround && entity.vy !== 0) {
+      } else if (entity.vy !== 0) {
+        // Only move if not on ground
         const moveY = entity.vy * clampedDt;
         const newY = entity.y + moveY;
         
         // Check vertical collision at new position
         if (this.hasCollision(entity.x, newY, entity.width || 12, entity.height || 14)) {
-          // Hit floor or ceiling
+          // Hit floor or ceiling - snap IMMEDIATELY
           if (moveY > 0) {
             // Moving down - hit ground
             const groundTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
