@@ -278,45 +278,91 @@ export class SurvivalScene {
   }
 
   render(ctx, alpha) {
-    // Render world and entities
-    this.game.renderer.render(alpha, {
-      players: [this.player],
-      arrows: this.arrows,
-      npcs: this.npcs
-    });
+    if (!ctx) return;
     
-    // HUD
-    const { w, h } = VIEW;
-    
-    // Countdown
-    if (this.countdown > 0) {
+    try {
+      // Render world and entities
+      if (this.game.renderer && this.game.renderer.render) {
+        this.game.renderer.render(alpha, {
+          players: this.player ? [this.player] : [],
+          arrows: this.arrows || [],
+          npcs: this.npcs || []
+        });
+      } else {
+        // Fallback: render manually if renderer not available
+        if (this.game.world && this.game.world.render) {
+          this.game.world.render(ctx);
+        }
+        
+        // Render player
+        if (this.player && !this.player.dead && this.player.render) {
+          this.player.render(ctx);
+        }
+        
+        // Render NPCs
+        if (this.npcs) {
+          for (const npc of this.npcs) {
+            if (npc && !npc.dead && npc.render) {
+              npc.render(ctx);
+            }
+          }
+        }
+        
+        // Render arrows
+        if (this.arrows) {
+          for (const arrow of this.arrows) {
+            if (arrow && arrow.active && arrow.render) {
+              arrow.render(ctx);
+            }
+          }
+        }
+      }
+      
+      // HUD
+      const { w, h } = VIEW;
+      
+      // Countdown
+      if (this.countdown > 0) {
+        ctx.fillStyle = PALETTE.accent;
+        ctx.font = 'bold 24px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(this.countdownText, w / 2, h / 2);
+      }
+      
+      // Wave counter (top)
+      ctx.fillStyle = PALETTE.bg1;
+      ctx.globalAlpha = 0.8;
+      ctx.fillRect(0, 0, w, 20);
+      ctx.globalAlpha = 1.0;
+      
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
       ctx.fillStyle = PALETTE.accent;
-      ctx.font = 'bold 24px monospace';
+      ctx.fillText(`Wave ${this.wave}`, 5, 5);
+      
+      // Arrows counter
+      if (this.player) {
+        ctx.fillStyle = PALETTE.sub;
+        ctx.fillText(`Arrows: ${this.player.arrows}`, 80, 5);
+      }
+      
+      // NPCs alive
+      const aliveNPCs = this.npcs ? this.npcs.filter(n => n && !n.dead).length : 0;
+      ctx.fillStyle = PALETTE.accent2;
+      ctx.fillText(`NPCs: ${aliveNPCs}`, 150, 5);
+    } catch (error) {
+      console.error('Error rendering survival scene:', error);
+      // Fallback render
+      ctx.fillStyle = PALETTE.bg0;
+      ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+      ctx.fillStyle = PALETTE.accent;
+      ctx.font = '16px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(this.countdownText, w / 2, h / 2);
+      ctx.fillText('Error rendering scene', VIEW.w / 2, VIEW.h / 2);
     }
-    
-    // Wave counter (top)
-    ctx.fillStyle = PALETTE.bg1;
-    ctx.globalAlpha = 0.8;
-    ctx.fillRect(0, 0, w, 20);
-    ctx.globalAlpha = 1.0;
-    
-    ctx.font = '8px monospace';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = PALETTE.accent;
-    ctx.fillText(`Wave ${this.wave}`, 5, 5);
-    
-    // Arrows counter
-    ctx.fillStyle = PALETTE.sub;
-    ctx.fillText(`Arrows: ${this.player.arrows}`, 80, 5);
-    
-    // NPCs alive
-    const aliveNPCs = this.npcs.filter(n => n && !n.dead).length;
-    ctx.fillStyle = PALETTE.accent2;
-    ctx.fillText(`NPCs: ${aliveNPCs}`, 150, 5);
   }
 }
 

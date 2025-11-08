@@ -110,7 +110,7 @@ export class PhysicsSystem {
             const worldBottom = this.world.height * this.world.tileSize;
             const atBottomWall = bottomY >= worldBottom - 2;
             if (atBottomWall) {
-              entity.jumpCooldown = 0.4; // 400ms cooldown when landing at bottom wall
+              entity.jumpCooldown = 0.6; // 600ms cooldown when landing at bottom wall (increased)
             } else {
               entity.jumpCooldown = 0.2; // 200ms cooldown when landing normally
             }
@@ -179,8 +179,8 @@ export class PhysicsSystem {
       
       if (atBottomWall && entity.onGround) {
         // Ensure jump cooldown is set when at bottom wall to prevent spam
-        if (entity.jumpCooldown === undefined || entity.jumpCooldown <= 0) {
-          entity.jumpCooldown = 0.3; // 300ms cooldown when at bottom wall
+        if (entity.jumpCooldown === undefined || entity.jumpCooldown <= 0.1) {
+          entity.jumpCooldown = 0.5; // 500ms cooldown when at bottom wall (increased)
         }
       }
 
@@ -357,7 +357,8 @@ export class PhysicsSystem {
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
                     entity.jumpCooldown <= 0 && // Don't jump if on cooldown
-                    !atBottomWall; // Don't jump if at bottom wall (prevents spam)
+                    !atBottomWall && // Don't jump if at bottom wall (prevents spam)
+                    entity.jumpCooldown <= 0.1; // Extra check: only jump if cooldown is very low
     
     if (entity.jumpBuffer > 0 && canJump) {
       entity.vy = JUMP_VEL;
