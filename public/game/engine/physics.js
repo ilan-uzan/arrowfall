@@ -412,24 +412,26 @@ export class PhysicsSystem {
     const touchingLeft = this.isTouchingWall(entity, 'left');
     const touchingRight = this.isTouchingWall(entity, 'right');
     
-    // CRITICAL: If touching wall, prevent movement in that direction to prevent bouncing
-    if (touchingLeft && targetVx < 0) {
-      // Touching left wall and trying to move left - zero velocity
-      entity.vx = 0;
-      return;
+    // CRITICAL: If touching wall, COMPLETELY prevent any movement in that direction
+    // This is the key to preventing bouncing - don't set velocity at all when touching walls
+    if (touchingLeft) {
+      // Touching left wall - prevent ALL leftward movement
+      if (targetVx < 0 || entity.vx < 0) {
+        entity.vx = 0;
+        return;
+      }
     }
-    if (touchingRight && targetVx > 0) {
-      // Touching right wall and trying to move right - zero velocity
-      entity.vx = 0;
-      return;
+    if (touchingRight) {
+      // Touching right wall - prevent ALL rightward movement
+      if (targetVx > 0 || entity.vx > 0) {
+        entity.vx = 0;
+        return;
+      }
     }
     
-    // CRITICAL: Also check if already touching wall and prevent any velocity in that direction
-    if (touchingLeft && entity.vx < 0) {
-      entity.vx = 0;
-      return;
-    }
-    if (touchingRight && entity.vx > 0) {
+    // CRITICAL: Also check if entity is on ground and prevent horizontal movement if needed
+    // (This is for wall-sliding, but we want to prevent bouncing)
+    if (entity.onGround && (touchingLeft || touchingRight)) {
       entity.vx = 0;
       return;
     }
