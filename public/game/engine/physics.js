@@ -137,6 +137,9 @@ export class PhysicsSystem {
             entity.onGround = true;
             // CRITICAL: Stop gravity when on ground to prevent bouncing
             entity.vy = 0;
+            // CRITICAL: Clear jump buffer and set cooldowns when landing
+            entity.jumpBuffer = 0; // Always clear jump buffer on landing
+            entity.landingCooldown = 0.2; // 200ms landing cooldown to prevent immediate jumping
             // CRITICAL: Set jump cooldown when landing to prevent immediate jump spam
             if (entity.jumpCooldown === undefined) {
               entity.jumpCooldown = 0;
@@ -149,9 +152,10 @@ export class PhysicsSystem {
               // Completely disable jumping on bottom wall
               entity.jumpCooldown = 999.0; // Effectively infinite cooldown
               entity.jumpBuffer = 0; // Clear jump buffer
+              entity.landingCooldown = 999.0; // Infinite landing cooldown on bottom wall
               entity.onBottomWall = true; // Mark as on bottom wall
             } else {
-              entity.jumpCooldown = 0.2; // 200ms cooldown when landing normally
+              entity.jumpCooldown = 0.3; // 300ms cooldown when landing normally (increased)
               entity.onBottomWall = false; // Clear bottom wall flag
             }
           } else {

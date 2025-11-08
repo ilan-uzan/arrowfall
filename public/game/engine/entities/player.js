@@ -135,6 +135,8 @@ export class Player {
         this.coyoteTime = 0;
         this.jumpBuffer = 0;
         this.jumpCooldown = 0; // Reset jump cooldown
+        this.landingCooldown = 0; // Reset landing cooldown
+        this.onBottomWall = false; // Reset bottom wall flag
       }
 
   getBounds() {

@@ -377,23 +377,25 @@ export class NPC {
     this.vy = 0;
   }
 
-  respawn(x, y, wave) {
-    this.x = x;
-    this.y = y;
-    this.vx = 0;
-    this.vy = 0;
-    this.dead = false;
-    this.arrows = START_ARROWS;
-    this.coyoteTime = 0;
-    this.jumpBuffer = 0;
-    this.jumpCooldown = 0; // Reset jump cooldown
-    this.state = NPC_STATE.PATROL;
-    this.stateTimer = 0;
-    // Reset patrol direction independently - alternate based on ID to ensure variety
-    this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
-    this.facing = this.patrolDirection;
-    this.setWave(wave);
-  }
+      respawn(x, y, wave) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.dead = false;
+        this.arrows = START_ARROWS;
+        this.coyoteTime = 0;
+        this.jumpBuffer = 0;
+        this.jumpCooldown = 0; // Reset jump cooldown
+        this.landingCooldown = 0; // Reset landing cooldown
+        this.onBottomWall = false; // Reset bottom wall flag
+        this.state = NPC_STATE.PATROL;
+        this.stateTimer = 0;
+        // Reset patrol direction independently - alternate based on ID to ensure variety
+        this.patrolDirection = (this.id % 2 === 0) ? 1 : -1;
+        this.facing = this.patrolDirection;
+        this.setWave(wave);
+      }
 
   getBounds() {
     return {
