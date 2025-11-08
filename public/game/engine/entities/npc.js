@@ -408,6 +408,7 @@ export class NPC {
     this.arrows = START_ARROWS;
     this.coyoteTime = 0;
     this.jumpBuffer = 0;
+    this.jumpCooldown = 0; // Reset jump cooldown
     this.state = NPC_STATE.PATROL;
     this.stateTimer = 0;
     // Reset patrol direction independently - alternate based on ID to ensure variety
