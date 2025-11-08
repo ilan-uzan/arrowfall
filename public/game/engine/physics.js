@@ -89,7 +89,11 @@ export class PhysicsSystem {
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       
       // CRITICAL: If touching wall, zero velocity BEFORE movement to prevent bouncing
-      if (entity.touchingWall.left || entity.touchingWall.right) {
+      // This prevents any movement into the wall
+      if (entity.touchingWall.left && entity.vx < 0) {
+        entity.vx = 0;
+      }
+      if (entity.touchingWall.right && entity.vx > 0) {
         entity.vx = 0;
       }
       
@@ -119,12 +123,22 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: If touching wall, ensure velocity is zero to prevent bouncing
-      if (entity.touchingWall.left || entity.touchingWall.right) {
+      // CRITICAL: Final check - if touching wall, ensure velocity is zero to prevent bouncing
+      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
+      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
+      if (entity.touchingWall.left && entity.vx < 0) {
+        entity.vx = 0;
+      }
+      if (entity.touchingWall.right && entity.vx > 0) {
         entity.vx = 0;
       }
 
       // Move vertically SECOND
+      // CRITICAL: If on ground, prevent downward movement to prevent bouncing
+      if (entity.onGround && entity.vy > 0) {
+        entity.vy = 0;
+      }
+      
       if (entity.vy !== 0) {
         const moveY = entity.vy * clampedDt;
         const newY = entity.y + moveY;
@@ -248,10 +262,13 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: Final check - if touching wall, ensure horizontal velocity is zero to prevent bouncing
+      // CRITICAL: Final check - if touching wall, ensure horizontal velocity is zero in that direction to prevent bouncing
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-      if (entity.touchingWall.left || entity.touchingWall.right) {
+      if (entity.touchingWall.left && entity.vx < 0) {
+        entity.vx = 0;
+      }
+      if (entity.touchingWall.right && entity.vx > 0) {
         entity.vx = 0;
       }
       
@@ -362,6 +379,18 @@ export class PhysicsSystem {
     if (!entity || entity.vx === undefined) return;
     
     dt = Math.max(0, Math.min(dt, 0.1));
+    
+    // CRITICAL: If touching wall, prevent movement in that direction to prevent bouncing
+    if (entity.touchingWall && entity.touchingWall.left && targetVx < 0) {
+      // Touching left wall and trying to move left - zero velocity
+      entity.vx = 0;
+      return;
+    }
+    if (entity.touchingWall && entity.touchingWall.right && targetVx > 0) {
+      // Touching right wall and trying to move right - zero velocity
+      entity.vx = 0;
+      return;
+    }
     
     // Validate targetVx
     if (isNaN(targetVx) || !isFinite(targetVx)) {
