@@ -27,6 +27,7 @@ export class PhysicsSystem {
       if (entity.jumpBuffer === undefined) entity.jumpBuffer = 0;
       if (entity.jumpCooldown === undefined) entity.jumpCooldown = 0;
       if (entity.landingCooldown === undefined) entity.landingCooldown = 0; // Prevent jumping immediately after landing
+      if (entity.groundStableTime === undefined) entity.groundStableTime = 0; // Time entity has been on ground continuously
 
       // Store old ground state
       const wasOnGround = entity.onGround;
@@ -448,7 +449,11 @@ export class PhysicsSystem {
       return false;
     }
     
-    const canJump = (entity.onGround || entity.coyoteTime > 0 || 
+    // CRITICAL: Only allow jumping if ground is stable (been on ground for at least 50ms)
+    // This prevents jumping when ground detection is flickering
+    const groundStable = entity.onGround && (entity.groundStableTime === undefined || entity.groundStableTime >= 0.05);
+    
+    const canJump = (groundStable || entity.coyoteTime > 0 || 
                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
                     entity.vy >= -50 && // Don't jump if already moving up fast
                     entity.jumpCooldown <= 0 && // Don't jump if on cooldown
