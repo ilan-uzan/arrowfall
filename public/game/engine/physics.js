@@ -125,19 +125,21 @@ export class PhysicsSystem {
       }
 
       // Move horizontally FIRST
-      // Check wall touching state
+      // Check wall touching state BEFORE movement
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       
-      // CRITICAL: If touching wall, prevent movement in that direction
+      // CRITICAL: If touching wall, COMPLETELY zero velocity in that direction
+      // This prevents ANY movement into the wall
       if (entity.touchingWall.left) {
-        entity.vx = Math.max(0, entity.vx); // Prevent leftward movement
+        entity.vx = 0; // Completely zero velocity when touching left wall
       }
       if (entity.touchingWall.right) {
-        entity.vx = Math.min(0, entity.vx); // Prevent rightward movement
+        entity.vx = 0; // Completely zero velocity when touching right wall
       }
       
-      if (entity.vx !== 0) {
+      // Only move if not touching any wall
+      if (!entity.touchingWall.left && !entity.touchingWall.right && entity.vx !== 0) {
         const moveX = entity.vx * clampedDt;
         const newX = entity.x + moveX;
         
@@ -156,28 +158,27 @@ export class PhysicsSystem {
           entity.vx = 0;
         } else {
           entity.x = newX;
+          // Update wall touching state after movement
           entity.touchingWall.left = this.isTouchingWall(entity, 'left');
           entity.touchingWall.right = this.isTouchingWall(entity, 'right');
         }
       }
       
-      // Final check - if touching wall, zero velocity
+      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-      if (entity.touchingWall.left) {
-        entity.vx = Math.max(0, entity.vx);
-      }
-      if (entity.touchingWall.right) {
-        entity.vx = Math.min(0, entity.vx);
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0; // Completely zero velocity when touching any wall
       }
 
       // Move vertically SECOND
-      // CRITICAL: If on ground, prevent downward movement
+      // CRITICAL: If on ground, COMPLETELY zero downward velocity
       if (entity.onGround) {
-        entity.vy = Math.min(0, entity.vy); // Only allow upward movement
+        entity.vy = 0; // Completely zero velocity when on ground
       }
       
-      if (entity.vy !== 0) {
+      // Only move if not on ground
+      if (!entity.onGround && entity.vy !== 0) {
         const moveY = entity.vy * clampedDt;
         const newY = entity.y + moveY;
         
@@ -264,9 +265,9 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, zero downward velocity and snap position
+      // CRITICAL: If on ground, COMPLETELY zero velocity and snap position
       if (entity.onGround) {
-        entity.vy = Math.min(0, entity.vy); // Only allow upward movement
+        entity.vy = 0; // Completely zero velocity when on ground
         
         // Snap position to ground
         const bottomY = entity.y + (entity.height || 14);
@@ -287,14 +288,11 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: Final check - if touching wall, prevent movement in that direction
+      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-      if (entity.touchingWall.left) {
-        entity.vx = Math.max(0, entity.vx);
-      }
-      if (entity.touchingWall.right) {
-        entity.vx = Math.min(0, entity.vx);
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0; // Completely zero velocity when touching any wall
       }
       
           // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
@@ -405,14 +403,29 @@ export class PhysicsSystem {
     
     dt = Math.max(0, Math.min(dt, 0.1));
     
+    // CRITICAL: Check wall touching state BEFORE setting velocity
+    // This prevents velocity from being set when touching walls
+    const touchingLeft = this.isTouchingWall(entity, 'left');
+    const touchingRight = this.isTouchingWall(entity, 'right');
+    
     // CRITICAL: If touching wall, prevent movement in that direction to prevent bouncing
-    if (entity.touchingWall && entity.touchingWall.left && targetVx < 0) {
+    if (touchingLeft && targetVx < 0) {
       // Touching left wall and trying to move left - zero velocity
       entity.vx = 0;
       return;
     }
-    if (entity.touchingWall && entity.touchingWall.right && targetVx > 0) {
+    if (touchingRight && targetVx > 0) {
       // Touching right wall and trying to move right - zero velocity
+      entity.vx = 0;
+      return;
+    }
+    
+    // CRITICAL: Also check if already touching wall and prevent any velocity in that direction
+    if (touchingLeft && entity.vx < 0) {
+      entity.vx = 0;
+      return;
+    }
+    if (touchingRight && entity.vx > 0) {
       entity.vx = 0;
       return;
     }
