@@ -62,11 +62,18 @@ export class PhysicsSystem {
       // Apply gravity
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
       
-      // Always apply gravity (simpler and more reliable)
-      entity.vy += GRAVITY * clampedDt;
-      const maxFallSpeed = 640;
-      if (entity.vy > maxFallSpeed) {
-        entity.vy = maxFallSpeed;
+      // CRITICAL: Only apply gravity if not on ground to prevent bouncing
+      if (!entity.onGround) {
+        entity.vy += GRAVITY * clampedDt;
+        const maxFallSpeed = 640;
+        if (entity.vy > maxFallSpeed) {
+          entity.vy = maxFallSpeed;
+        }
+      } else {
+        // On ground - ensure velocity is zero to prevent bouncing
+        if (entity.vy > 0) {
+          entity.vy = 0;
+        }
       }
 
       // Move horizontally FIRST
@@ -86,12 +93,18 @@ export class PhysicsSystem {
             entity.x = (leftTile + 1) * this.world.tileSize;
             entity.touchingWall.left = true;
           }
+          // CRITICAL: Always zero horizontal velocity when hitting wall to prevent bouncing
           entity.vx = 0;
         } else {
           entity.x = newX;
           entity.touchingWall.left = false;
           entity.touchingWall.right = false;
         }
+      }
+      
+      // CRITICAL: If touching wall, ensure velocity is zero to prevent bouncing
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0;
       }
 
       // Move vertically SECOND
@@ -138,6 +151,7 @@ export class PhysicsSystem {
             // Moving up - hit ceiling
             const topTile = Math.floor(entity.y / this.world.tileSize);
             entity.y = (topTile + 1) * this.world.tileSize;
+            // CRITICAL: Always zero velocity when hitting ceiling to prevent bouncing
             entity.vy = 0;
           }
         } else {
@@ -195,10 +209,35 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, zero downward velocity to prevent bouncing
+      // CRITICAL: If on ground, ALWAYS zero downward velocity to prevent bouncing
       // This must happen AFTER all movement to ensure no bouncing
-      if (entity.onGround && entity.vy > 0) {
-        entity.vy = 0; // Zero downward velocity when on ground
+      if (entity.onGround) {
+        if (entity.vy > 0) {
+          entity.vy = 0; // Zero downward velocity when on ground
+        }
+        // Also ensure position is snapped to ground to prevent floating
+        const bottomY = entity.y + (entity.height || 14);
+        const tileBelow = Math.floor(bottomY / this.world.tileSize);
+        const leftTile = Math.floor(entity.x / this.world.tileSize);
+        const rightTile = Math.floor((entity.x + (entity.width || 12) - 0.1) / this.world.tileSize);
+        
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (this.world.isSolid(tx, tileBelow)) {
+            const groundY = tileBelow * this.world.tileSize;
+            const distance = bottomY - groundY;
+            // Snap to ground if very close (within 2 pixels)
+            if (distance > 0 && distance <= 2) {
+              entity.y = groundY - (entity.height || 14);
+              entity.vy = 0;
+              break;
+            }
+          }
+        }
+      }
+      
+      // CRITICAL: If touching wall, ensure horizontal velocity is zero to prevent bouncing
+      if (entity.touchingWall.left || entity.touchingWall.right) {
+        entity.vx = 0;
       }
       
           // CRITICAL: If entity is at bottom wall, prevent ANY upward movement
