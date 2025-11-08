@@ -256,10 +256,11 @@ export class NPC {
         
         this.facing = this.patrolDirection;
         
-        // Jump if on ground and just started evading
-        if (this.onGround && this.stateTimer < 0.1) {
-          this.vy = -380; // Jump velocity
-        }
+            // Jump if on ground and just started evading (only once)
+            // CRITICAL: Only jump if not already moving up (prevent spam)
+            if (this.onGround && this.stateTimer < 0.1 && this.vy >= -50) {
+              this.vy = -380; // Jump velocity
+            }
         
         // Return to patrol after evading (150^2 = 22500)
         if (this.stateTimer > 1.0 || distSq > 22500) {
@@ -315,11 +316,12 @@ export class NPC {
           }
         }
         
-        // Jump if needed to reach arrow
-        if (this.onGround && targetDy < -20 && this.stateTimer > 0.2) {
-          this.vy = -380;
-          this.stateTimer = 0;
-        }
+            // Jump if needed to reach arrow (only if not already jumping)
+            // CRITICAL: Only jump if not already moving up (prevent spam)
+            if (this.onGround && targetDy < -20 && this.stateTimer > 0.2 && this.vy >= -50) {
+              this.vy = -380;
+              this.stateTimer = 0;
+            }
         
         // Check if arrow reached (24^2 = 576 for easier pickup)
         const arrowDx = this.x - this.targetX;

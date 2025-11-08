@@ -280,7 +280,12 @@ export class PhysicsSystem {
   }
 
   applyJump(entity, jumpPressed) {
-    // Jump buffer
+    // Initialize jump buffer if needed
+    if (entity.jumpBuffer === undefined) {
+      entity.jumpBuffer = 0;
+    }
+    
+    // Jump buffer - only set on new press
     if (jumpPressed && entity.jumpBuffer <= 0) {
       entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
     }
@@ -289,8 +294,10 @@ export class PhysicsSystem {
     }
 
     // Can jump from ground, coyote time, or wall
-    const canJump = entity.onGround || entity.coyoteTime > 0 || 
-                    (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right));
+    // CRITICAL: Only allow jump if entity is not already moving up (prevent double jumps)
+    const canJump = (entity.onGround || entity.coyoteTime > 0 || 
+                    (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right))) &&
+                    entity.vy >= -50; // Don't jump if already moving up fast (prevent spam)
     
     if (entity.jumpBuffer > 0 && canJump) {
       entity.vy = JUMP_VEL;
