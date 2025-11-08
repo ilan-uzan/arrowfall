@@ -27,7 +27,7 @@ export class SurvivalScene {
       }
       
       // Create player with safe spawn access
-      const spawn = this.game.world.spawns.p1 || { x: 32, y: 128 };
+      const spawn = this.game.world.spawns.p1 || { x: 32, y: 114 };
       this.player = new Player(spawn.x, spawn.y, 1, PLAYER_COLORS[0], this.game.physics);
       
       // Bind first gamepad to player
@@ -61,8 +61,8 @@ export class SurvivalScene {
         return;
       }
       
-      const spawn1 = this.game.world.spawns.npc1 || { x: 96, y: 128 };
-      const spawn2 = this.game.world.spawns.npc2 || { x: 224, y: 128 };
+      const spawn1 = this.game.world.spawns.npc1 || { x: 96, y: 114 };
+      const spawn2 = this.game.world.spawns.npc2 || { x: 224, y: 114 };
       
       const npc1 = new NPC(spawn1.x, spawn1.y, 2, PLAYER_COLORS[1], this.game.physics);
       const npc2 = new NPC(spawn2.x, spawn2.y, 3, PLAYER_COLORS[2], this.game.physics);
@@ -253,7 +253,7 @@ export class SurvivalScene {
       if (aliveNPCs.length === 0 && this.npcs.length > 0) {
         // Next wave
         this.wave++;
-        const spawn = this.game.world?.spawns?.p1 || { x: 32, y: 128 };
+        const spawn = this.game.world?.spawns?.p1 || { x: 32, y: 114 };
         if (this.player && this.player.respawn) {
           this.player.respawn(spawn.x, spawn.y);
         }
