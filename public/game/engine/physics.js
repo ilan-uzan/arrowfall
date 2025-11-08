@@ -29,112 +29,43 @@ export class PhysicsSystem {
       if (entity.jumpLockTime === undefined) entity.jumpLockTime = 0;
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0;
       if (entity.justLanded === undefined) entity.justLanded = false;
-      // CRITICAL: Contact lock prevents movement immediately after touching a surface
-      if (entity.contactLock === undefined) entity.contactLock = 0;
-      if (entity.lastContactX === undefined) entity.lastContactX = null;
-      if (entity.lastContactY === undefined) entity.lastContactY = null;
 
       // Store old ground state
       const wasOnGround = entity.onGround;
       
       const clampedDt = Math.max(0, Math.min(dt, 0.1));
       
-      // Decrement contact lock timer
-      if (entity.contactLock > 0) {
-        entity.contactLock -= dt;
-        // If locked, only prevent horizontal/downward movement, but allow jumps
-        if (entity.contactLock > 0) {
-          // Only prevent movement if we're still in contact
-          const stillInContact = this.hasCollision(entity.x, entity.y, entity.width || 12, entity.height || 14);
-          if (stillInContact) {
-            // Prevent horizontal movement when locked
-            entity.vx = 0;
-            // Prevent downward movement when locked (but allow upward for jumps)
-            if (entity.vy > 0) {
-              entity.vy = 0;
-            }
-            // Only lock position if moving down or stationary - allow upward movement
-            if (entity.lastContactX !== null && entity.vx === 0) {
-              entity.x = entity.lastContactX;
-            }
-            if (entity.lastContactY !== null && entity.vy >= 0) {
-              entity.y = entity.lastContactY;
-            }
-          } else {
-            // No longer in contact, clear lock immediately
-            entity.contactLock = 0;
-            entity.lastContactX = null;
-            entity.lastContactY = null;
-          }
-        } else {
-          // Lock expired, clear contact positions
-          entity.lastContactX = null;
-          entity.lastContactY = null;
-        }
-      }
-      
-      // CRITICAL: Check if entity is ALREADY in collision at current position
-      const currentCollision = this.hasCollision(entity.x, entity.y, entity.width || 12, entity.height || 14);
-      
-      // If already in collision, snap position PERFECTLY and lock contact
-      if (currentCollision) {
-        // Get tile positions
-        const leftTile = Math.floor(entity.x / this.world.tileSize);
-        const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
-        const topTile = Math.floor(entity.y / this.world.tileSize);
-        const bottomTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
-        
-        let snapped = false;
-        
-        // Check horizontal collision - snap to wall PERFECTLY
-        for (let ty = topTile; ty <= bottomTile; ty++) {
-          if (this.world.isSolid(leftTile, ty)) {
-            // Touching left wall - snap to right side of wall EXACTLY
-            entity.x = (leftTile + 1) * this.world.tileSize;
-            entity.touchingWall.left = true;
-            entity.vx = 0;
-            snapped = true;
-          }
-          if (this.world.isSolid(rightTile, ty)) {
-            // Touching right wall - snap to left side of wall EXACTLY
-            entity.x = rightTile * this.world.tileSize - (entity.width || 12);
-            entity.touchingWall.right = true;
-            entity.vx = 0;
-            snapped = true;
-          }
-        }
-        
-        // Check vertical collision - snap to floor/ceiling PERFECTLY
-        for (let tx = leftTile; tx <= rightTile; tx++) {
-          if (this.world.isSolid(tx, topTile)) {
-            // Touching ceiling - snap below ceiling EXACTLY
-            entity.y = (topTile + 1) * this.world.tileSize;
-            entity.vy = 0;
-            snapped = true;
-          }
-          if (this.world.isSolid(tx, bottomTile)) {
-            // Touching floor - snap on top of floor EXACTLY
-            entity.y = bottomTile * this.world.tileSize - (entity.height || 14);
-            entity.vy = 0;
-            entity.onGround = true;
-            snapped = true;
-          }
-        }
-        
-        // If we snapped, lock contact briefly to prevent bounce loop
-        // Only lock if we weren't already in contact (new collision) and not jumping
-        if (snapped && entity.contactLock <= 0 && entity.vy >= 0) {
-          entity.contactLock = 0.01; // Very short lock - just 10ms to prevent immediate re-collision
-          entity.lastContactX = entity.x;
-          entity.lastContactY = entity.y;
-        }
-      }
-      
-      // Check ground state
+      // CRITICAL: Check ground state FIRST before any movement
+      // This ensures we know if we're on ground before applying physics
       if (entity.vy === undefined || entity.vy >= -50) {
         entity.onGround = this.isOnGround(entity);
       } else {
         entity.onGround = false;
+      }
+      
+      // CRITICAL: If on ground, ensure position is snapped and velocity is zero
+      // This prevents bouncing by ensuring we're always properly positioned
+      if (entity.onGround) {
+        // Snap position to ground
+        const bottomY = entity.y + (entity.height || 14);
+        const tileBelow = Math.floor(bottomY / this.world.tileSize);
+        const leftTile = Math.floor(entity.x / this.world.tileSize);
+        const rightTile = Math.floor((entity.x + (entity.width || 12) - 0.1) / this.world.tileSize);
+        
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (this.world.isSolid(tx, tileBelow)) {
+            const groundY = tileBelow * this.world.tileSize;
+            const distance = bottomY - groundY;
+            if (distance > 0 && distance <= 4) {
+              entity.y = groundY - (entity.height || 14);
+              // Only zero downward velocity, allow upward (jumps)
+              if (entity.vy > 0) {
+                entity.vy = 0;
+              }
+              break;
+            }
+          }
+        }
       }
       
       // Update coyote time
@@ -184,15 +115,14 @@ export class PhysicsSystem {
         entity.vx = 0; // Zero velocity when touching any wall
       }
       
-      // Only move horizontally if not touching walls and not locked
-      if (!entity.touchingWall.left && !entity.touchingWall.right && entity.vx !== 0 && entity.contactLock <= 0) {
-        // Only move if not touching any wall
+      // Move horizontally if not touching walls
+      if (!entity.touchingWall.left && !entity.touchingWall.right && entity.vx !== 0) {
         const moveX = entity.vx * clampedDt;
         const newX = entity.x + moveX;
         
         // Check horizontal collision at new position
         if (this.hasCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
-          // Hit wall - snap to wall PERFECTLY and lock contact
+          // Hit wall - snap to wall PERFECTLY
           if (moveX > 0) {
             // Moving right - hit right wall
             const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
@@ -205,11 +135,6 @@ export class PhysicsSystem {
             entity.touchingWall.left = true;
           }
           entity.vx = 0;
-          // Lock contact briefly to prevent bounce loop (only if not jumping)
-          if (entity.contactLock <= 0 && entity.vy >= 0) {
-            entity.contactLock = 0.01;
-            entity.lastContactX = entity.x;
-          }
         } else {
           entity.x = newX;
           // Update wall touching state after movement
@@ -226,21 +151,21 @@ export class PhysicsSystem {
       }
 
       // Move vertically SECOND
-      // CRITICAL: If on ground, zero downward velocity (but allow upward for jumps)
+      // CRITICAL: If on ground, only zero downward velocity (allow upward for jumps)
       if (entity.onGround && entity.vy > 0) {
         // Only zero downward velocity when on ground, allow upward (jumps)
         entity.vy = 0;
       }
       
-      // Move vertically if not locked
-      if (entity.contactLock <= 0) {
+      // Move vertically if not on ground OR moving up (jumping)
+      if (!entity.onGround || entity.vy < 0) {
         if (entity.vy !== 0) {
           const moveY = entity.vy * clampedDt;
           const newY = entity.y + moveY;
           
           // Check vertical collision at new position
           if (this.hasCollision(entity.x, newY, entity.width || 12, entity.height || 14)) {
-            // Hit floor or ceiling - snap PERFECTLY and lock contact
+            // Hit floor or ceiling - snap PERFECTLY
             if (moveY > 0) {
               // Moving down - hit ground
               const groundTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
@@ -269,21 +194,11 @@ export class PhysicsSystem {
                   entity.onBottomWall = false;
                 }
               }
-              // Lock contact briefly to prevent bounce loop (only if not jumping)
-              if (entity.contactLock <= 0 && entity.vy >= 0) {
-                entity.contactLock = 0.01;
-                entity.lastContactY = entity.y;
-              }
             } else {
               // Moving up - hit ceiling
               const topTile = Math.floor(entity.y / this.world.tileSize);
               entity.y = (topTile + 1) * this.world.tileSize;
               entity.vy = 0;
-              // Lock contact briefly to prevent bounce loop (only if not jumping)
-              if (entity.contactLock <= 0 && entity.vy >= 0) {
-                entity.contactLock = 0.01;
-                entity.lastContactY = entity.y;
-              }
             }
           } else {
             entity.y = newY;
@@ -332,15 +247,14 @@ export class PhysicsSystem {
         entity.onGround = false;
       }
       
-      // CRITICAL: If on ground, only zero downward velocity (allow upward for jumps)
-      // Don't aggressively zero velocity here - let jump logic handle it
-      if (entity.onGround && entity.vy > 0) {
-        // Only zero downward velocity when on ground, allow upward (jumps)
-        entity.vy = 0;
-      }
-      
-      // Snap position to ground if very close, but don't interfere with jumps
-      if (entity.onGround && entity.vy <= 0) {
+      // CRITICAL: Final ground check - ensure position is snapped if on ground
+      if (entity.onGround) {
+        // Only zero downward velocity, allow upward (jumps)
+        if (entity.vy > 0) {
+          entity.vy = 0;
+        }
+        
+        // Snap position to ground if needed
         const bottomY = entity.y + (entity.height || 14);
         const tileBelow = Math.floor(bottomY / this.world.tileSize);
         const leftTile = Math.floor(entity.x / this.world.tileSize);
@@ -350,16 +264,10 @@ export class PhysicsSystem {
           if (this.world.isSolid(tx, tileBelow)) {
             const groundY = tileBelow * this.world.tileSize;
             const distance = bottomY - groundY;
-            if (distance > 0 && distance <= 3) {
+            if (distance > 0 && distance <= 4) {
               entity.y = groundY - (entity.height || 14);
-              // Only zero downward velocity, not upward
               if (entity.vy > 0) {
                 entity.vy = 0;
-              }
-              // Only set contact lock if not already jumping
-              if (entity.vy <= 0 && entity.contactLock <= 0) {
-                entity.contactLock = 0.01; // Very short lock - just 10ms
-                entity.lastContactY = entity.y;
               }
               break;
             }
@@ -367,28 +275,21 @@ export class PhysicsSystem {
         }
       }
       
-      // CRITICAL: Final check - if touching wall, COMPLETELY zero velocity and snap PERFECTLY
+      // CRITICAL: Final check - if touching wall, zero velocity and snap position
       entity.touchingWall.left = this.isTouchingWall(entity, 'left');
       entity.touchingWall.right = this.isTouchingWall(entity, 'right');
       if (entity.touchingWall.left || entity.touchingWall.right) {
-        entity.vx = 0; // Completely zero velocity when touching any wall
+        entity.vx = 0;
         
-        // Snap position to wall PERFECTLY to prevent floating
+        // Snap position to wall
         const leftTile = Math.floor(entity.x / this.world.tileSize);
         const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
         
         if (entity.touchingWall.left) {
-          // Snap to right side of left wall EXACTLY
           entity.x = (leftTile + 1) * this.world.tileSize;
         }
         if (entity.touchingWall.right) {
-          // Snap to left side of right wall EXACTLY
           entity.x = rightTile * this.world.tileSize - (entity.width || 12);
-        }
-        // Lock contact briefly to prevent bounce loop (only if not jumping)
-        if (entity.contactLock <= 0 && entity.vy >= 0) {
-          entity.contactLock = 0.01;
-          entity.lastContactX = entity.x;
         }
       }
       

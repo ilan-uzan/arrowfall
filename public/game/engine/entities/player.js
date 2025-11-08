@@ -140,9 +140,6 @@ export class Player {
         this.justLanded = false; // Reset just landed flag
         this.onBottomWall = false; // Reset bottom wall flag
         this.groundStableTime = 0; // Reset ground stability timer
-        this.contactLock = 0; // Reset contact lock
-        this.lastContactX = null; // Reset contact position
-        this.lastContactY = null; // Reset contact position
       }
 
   getBounds() {
