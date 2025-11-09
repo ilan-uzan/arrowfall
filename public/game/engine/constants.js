@@ -27,8 +27,8 @@ export const MOVE_ACC = 2500;              // px/s^2
 export const MAX_VEL_X = 180;              // px/s
 export const JUMP_VEL = -380;              // px/s
 export const WALL_SLIDE_MAX = 60;          // px/s
-export const COYOTE_MS = 80;
-export const JUMP_BUFFER_MS = 100;
+export const COYOTE_MS = 100; // Increased for more forgiving jump timing
+export const JUMP_BUFFER_MS = 150; // Increased buffer for better responsiveness
 
 // Anti-bounce constants
 export const GROUND_FRICTION = 0.15;       // Ground friction per step (tuned for 120Hz)
