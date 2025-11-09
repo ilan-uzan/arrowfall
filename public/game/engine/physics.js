@@ -33,12 +33,14 @@ export class PhysicsSystem {
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0;
       if (entity.justLanded === undefined) entity.justLanded = false;
 
-      // Store old ground state BEFORE resetting
-      const wasOnGround = entity.onGround;
+      // Store old ground state
+      const wasOnGround = entity.onGround || false;
       
-      // GOLDEN RULE: Reset isGrounded at start of each step
-      // It will be set only from Y-axis downward resolves
-      entity.onGround = false;
+      // STEP 1: Check ground state BEFORE movement (for gravity decision)
+      // This uses the previous frame's position to determine if we should apply gravity
+      entity.onGround = this.isOnGround(entity);
+      
+      // Reset wall touching state (will be set by collision resolution)
       entity.touchingWall.left = false;
       entity.touchingWall.right = false;
       
@@ -51,7 +53,7 @@ export class PhysicsSystem {
         }
       }
 
-      // STEP 1: Update coyote time and ground stability
+      // STEP 2: Update coyote time and ground stability
       if (wasOnGround && !entity.onGround) {
         entity.coyoteTime = COYOTE_MS / 1000;
       }
@@ -70,41 +72,53 @@ export class PhysicsSystem {
         entity.justLanded = false;
       }
 
-      // STEP 2: Apply gravity ONLY if not on ground
+      // STEP 3: Apply gravity ONLY if not on ground
       if (!entity.onGround) {
         entity.vy += GRAVITY * dt;
         const maxFallSpeed = 640;
         if (entity.vy > maxFallSpeed) {
           entity.vy = maxFallSpeed;
         }
+      } else {
+        // On ground - zero downward velocity
+        if (entity.vy > 0) {
+          entity.vy = 0;
+        }
       }
 
-      // STEP 3: Integrate velocity (move entity)
+      // STEP 4: Integrate velocity (move entity)
       const oldX = entity.x;
       const oldY = entity.y;
       entity.x += entity.vx * dt;
       entity.y += entity.vy * dt;
 
-      // STEP 4: Apply wrapping AFTER integration but BEFORE collision resolution
+      // STEP 5: Apply wrapping AFTER integration but BEFORE collision resolution
       const wrapped = wrapPosition(entity.x, entity.y);
       entity.x = wrapped.x;
       entity.y = wrapped.y;
 
-      // STEP 5: Resolve collisions - ONE AXIS AT A TIME
+      // STEP 6: Resolve collisions - ONE AXIS AT A TIME
       // Order: X-axis first, then Y-axis (consistent order prevents jitter)
       
       // Resolve X-axis collisions
       this.resolveAxisCollision(entity, 'x');
       
-      // Resolve Y-axis collisions
+      // Resolve Y-axis collisions (this will set onGround if landing)
       this.resolveAxisCollision(entity, 'y');
+      
+      // STEP 7: Final ground state check after collision resolution
+      entity.onGround = this.isOnGround(entity);
 
-      // STEP 6: Apply friction AFTER collision resolution
+      // STEP 8: Apply friction AFTER collision resolution
       if (entity.onGround) {
         // Ground friction - only apply when grounded
         entity.vx *= (1 - GROUND_FRICTION);
         if (Math.abs(entity.vx) < SLEEP_EPS) {
           entity.vx = 0;
+        }
+        // Ensure downward velocity is zero when on ground
+        if (entity.vy > 0) {
+          entity.vy = 0;
         }
       } else {
         // Air drag - small drag when airborne
@@ -116,7 +130,7 @@ export class PhysicsSystem {
         entity.vy = 0;
       }
 
-      // STEP 7: Final state checks
+      // STEP 9: Final state checks
       // Bottom wall check
       const bottomY = entity.y + (entity.height || 14);
       const bottomTile = Math.floor(bottomY / this.world.tileSize);
@@ -166,12 +180,12 @@ export class PhysicsSystem {
       let resolveLeft = false;
       let resolveRight = false;
       
-      // Check left wall - entity overlaps if x < wallRight
+      // Check left wall - only resolve if entity is actually penetrating (x < wallRight AND moving left or already inside)
       for (let ty = topTile; ty <= bottomTile; ty++) {
         if (this.world.isSolid(leftTile, ty)) {
           const wallRight = (leftTile + 1) * this.world.tileSize;
-          // Entity is overlapping if its left edge is to the left of the wall's right edge
-          if (x < wallRight) {
+          // Entity is overlapping if its left edge is inside the wall
+          if (x < wallRight && x + width > wallRight) {
             const overlap = wallRight - x;
             if (overlap > minOverlap) {
               minOverlap = overlap;
@@ -182,12 +196,12 @@ export class PhysicsSystem {
         }
       }
       
-      // Check right wall - entity overlaps if (x + width) > wallLeft
+      // Check right wall - only resolve if entity is actually penetrating
       for (let ty = topTile; ty <= bottomTile; ty++) {
         if (this.world.isSolid(rightTile, ty)) {
           const wallLeft = rightTile * this.world.tileSize;
-          // Entity is overlapping if its right edge is to the right of the wall's left edge
-          if ((x + width) > wallLeft) {
+          // Entity is overlapping if its right edge is inside the wall
+          if (x < wallLeft && x + width > wallLeft) {
             const overlap = (x + width) - wallLeft;
             if (overlap > minOverlap) {
               minOverlap = overlap;
@@ -222,6 +236,14 @@ export class PhysicsSystem {
         if (Math.abs(entity.vx) < SLEEP_EPS) {
           entity.vx = 0;
         }
+      } else {
+        // Check if touching wall (for wall-slide/jump) but not penetrating
+        if (Math.abs(x - ((leftTile + 1) * this.world.tileSize)) < 1) {
+          entity.touchingWall.left = true;
+        }
+        if (Math.abs((x + width) - (rightTile * this.world.tileSize)) < 1) {
+          entity.touchingWall.right = true;
+        }
       }
     } else if (axis === 'y') {
       // Resolve Y-axis collisions
@@ -229,12 +251,12 @@ export class PhysicsSystem {
       let resolveTop = false;
       let resolveBottom = false;
       
-      // Check ceiling - entity overlaps if y < ceilingBottom
+      // Check ceiling - only resolve if entity is actually penetrating
       for (let tx = leftTile; tx <= rightTile; tx++) {
         if (this.world.isSolid(tx, topTile)) {
           const ceilingBottom = (topTile + 1) * this.world.tileSize;
-          // Entity is overlapping if its top edge is above the ceiling's bottom edge
-          if (y < ceilingBottom) {
+          // Entity is overlapping if its top edge is inside the ceiling
+          if (y < ceilingBottom && y + height > ceilingBottom) {
             const overlap = ceilingBottom - y;
             if (overlap > minOverlap) {
               minOverlap = overlap;
@@ -245,12 +267,12 @@ export class PhysicsSystem {
         }
       }
       
-      // Check floor - entity overlaps if (y + height) > floorTop
+      // Check floor - only resolve if entity is actually penetrating
       for (let tx = leftTile; tx <= rightTile; tx++) {
         if (this.world.isSolid(tx, bottomTile)) {
           const floorTop = bottomTile * this.world.tileSize;
-          // Entity is overlapping if its bottom edge is below the floor's top edge
-          if ((y + height) > floorTop) {
+          // Entity is overlapping if its bottom edge is inside the floor
+          if (y < floorTop && y + height > floorTop) {
             const overlap = (y + height) - floorTop;
             if (overlap > minOverlap) {
               minOverlap = overlap;
