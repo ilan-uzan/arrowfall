@@ -131,14 +131,16 @@ export class PhysicsSystem {
       }
 
       // STEP 9: Final state checks
-      // Bottom wall check
+      // Bottom wall check - just track state, don't prevent jumping
       const bottomY = entity.y + (entity.height || 14);
       const bottomTile = Math.floor(bottomY / this.world.tileSize);
       const atBottomWall = bottomTile >= (this.world.height - 1);
       
       if (atBottomWall) {
         entity.onBottomWall = true;
-        if (entity.vy < 0) {
+        // Only zero upward velocity if we're actually on the bottom wall and grounded
+        // Don't prevent jumping - collision resolution handles that
+        if (entity.vy < 0 && entity.onGround) {
           entity.vy = 0;
         }
         entity.onGround = true;
@@ -315,8 +317,8 @@ export class PhysicsSystem {
             const bottomTile = Math.floor(bottomY / this.world.tileSize);
             const atBottomWall = bottomTile >= (this.world.height - 1);
             if (atBottomWall) {
-              entity.jumpCooldown = 0.15;
-              entity.jumpLockTime = 0.1;
+              entity.jumpCooldown = 0.1; // Reduced from 0.15 for more responsive jumping
+              entity.jumpLockTime = 0.05; // Reduced from 0.1 for more responsive jumping
               entity.onBottomWall = true;
             } else {
               entity.jumpCooldown = 0.1;
@@ -484,19 +486,6 @@ export class PhysicsSystem {
     }
     if (entity.jumpCooldown > 0) {
       entity.jumpCooldown -= STEP;
-    }
-    
-    // Check bottom wall
-    const bottomY = entity.y + (entity.height || 14);
-    const bottomTile = Math.floor(bottomY / this.world.tileSize);
-    const atBottomWall = bottomTile >= (this.world.height - 1);
-    
-    if (atBottomWall) {
-      entity.jumpBuffer = 0;
-      if (entity.vy < 0) {
-        entity.vy = 0;
-      }
-      return false;
     }
     
     // Jump buffer - set on NEW press
