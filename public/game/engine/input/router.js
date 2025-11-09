@@ -186,7 +186,8 @@ export class InputRouter {
         rightPressed: rightPressed,
         upPressed: upPressed,
         downPressed: downPressed,
-        jump: jumpPressed,
+        jump: jumpPressed, // Single-frame press (for menu navigation)
+        jumpHeld: button0Pressed, // Raw button state (for continuous jumping)
         shoot: shootPressed,
         pause: pausePressed,
         axisX: axisX,

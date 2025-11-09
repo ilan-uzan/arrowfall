@@ -486,36 +486,35 @@ export class PhysicsSystem {
       entity.jumpCooldown -= STEP;
     }
     
-    // Jump buffer - set on ANY press (allows holding button)
+    // Jump buffer - set on ANY press AND keep refreshing while pressed
     if (jumpPressed) {
       entity.jumpBuffer = JUMP_BUFFER_MS / 1000;
     }
     
-    // Decrement jump buffer
-    if (entity.jumpBuffer > 0) {
+    // Decrement jump buffer only if button not pressed
+    if (!jumpPressed && entity.jumpBuffer > 0) {
       entity.jumpBuffer -= STEP;
     }
     
-    // ULTRA-SIMPLIFIED jump conditions - instant response
+    // INSTANT jump conditions - no delays
     // Allow jumping if:
-    // 1. On ground (no lock time check) OR coyote time active
+    // 1. On ground OR coyote time active OR buffer active
     // 2. OR touching a wall (wall-jump)
-    // Only block if already jumping up fast or on cooldown
-    const canJumpFromGround = entity.onGround || entity.coyoteTime > 0;
+    // Only block if already jumping up fast
+    const canJumpFromGround = entity.onGround || entity.coyoteTime > 0 || entity.jumpBuffer > 0;
     const canWallJump = entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right) && !entity.onGround;
     
-    // Only block if moving up fast (already jumping) or on cooldown
-    const canJump = entity.jumpBuffer > 0 &&
-                    entity.jumpCooldown <= 0 &&
-                    entity.vy >= -50 && // Less restrictive - allow jumping even if slightly moving up
+    // Execute jump immediately if conditions met - no cooldown check for ground jumps
+    const canJump = (entity.jumpBuffer > 0 || jumpPressed) &&
+                    entity.vy >= -50 && // Only block if already jumping up fast
                     (canJumpFromGround || canWallJump);
     
     if (canJump) {
-      // Execute jump immediately
+      // Execute jump immediately - NO delays
       entity.vy = JUMP_VEL;
-      entity.jumpCooldown = 0.02; // Minimal cooldown (2 frames)
+      entity.jumpCooldown = 0; // No cooldown - allow instant repeated jumps
       entity.jumpBuffer = 0;
-      entity.jumpLockTime = 0; // No lock time - allow immediate re-jumping
+      entity.jumpLockTime = 0; // No lock time
       entity.justLanded = false;
       entity.coyoteTime = 0;
       

@@ -1,5 +1,5 @@
 // Player Entity
-import { MAX_VEL_X, START_ARROWS, MAX_ARROWS, ARROW_SPEED, PALETTE } from '../constants.js';
+import { MAX_VEL_X, START_ARROWS, MAX_ARROWS, ARROW_SPEED, PALETTE, JUMP_VEL } from '../constants.js';
 import { PhysicsSystem } from '../physics.js';
 import { Arrow } from './arrow.js';
 
@@ -74,12 +74,26 @@ export class Player {
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
       
       // Apply physics (gravity + collision) - this moves the entity FIRST
-      // This ensures ground state is up-to-date before jump logic
       this.physics.updateEntity(this, dt);
       
-      // Jumping - AFTER physics update so ground state is current
-      if (actions.jump) {
-        this.physics.applyJump(this, true);
+      // Jumping - Use jumpHeld (raw button state) for instant, responsive jumping
+      // Check jumpHeld instead of jump (single-frame) to allow holding button
+      if (actions.jumpHeld) {
+        // Execute jump immediately if on ground or coyote time active
+        if (this.onGround || (this.coyoteTime && this.coyoteTime > 0)) {
+          // Only jump if not already jumping up fast
+          if (this.vy >= -50) {
+            this.vy = JUMP_VEL;
+            this.coyoteTime = 0;
+            this.jumpBuffer = 0;
+            this.jumpCooldown = 0;
+            this.jumpLockTime = 0;
+            this.justLanded = false;
+          }
+        } else {
+          // Not on ground - use physics system for wall-jump
+          this.physics.applyJump(this, true);
+        }
       }
 
       // Shooting
