@@ -73,26 +73,18 @@ export class Player {
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
       
-      // Apply physics (gravity + collision) - this moves the entity FIRST
-      this.physics.updateEntity(this, dt);
+      // Apply physics (gravity + collision) - pass jumpHeld for instant jump execution
+      // Jump check happens INSIDE updateEntity right after ground state check
+      this.physics.updateEntity(this, dt, actions.jumpHeld || false);
       
-      // Jumping - Use jumpHeld (raw button state) for instant, responsive jumping
-      // Check jumpHeld instead of jump (single-frame) to allow holding button
-      if (actions.jumpHeld) {
-        // Execute jump immediately if on ground or coyote time active
-        if (this.onGround || (this.coyoteTime && this.coyoteTime > 0)) {
-          // Only jump if not already jumping up fast
-          if (this.vy >= -50) {
-            this.vy = JUMP_VEL;
-            this.coyoteTime = 0;
-            this.jumpBuffer = 0;
-            this.jumpCooldown = 0;
-            this.jumpLockTime = 0;
-            this.justLanded = false;
-          }
-        } else {
-          // Not on ground - use physics system for wall-jump
-          this.physics.applyJump(this, true);
+      // Wall-jump check (after physics update)
+      if (actions.jumpHeld && !this.onGround && this.touchingWall && 
+          (this.touchingWall.left || this.touchingWall.right) && this.vy >= -50) {
+        this.vy = JUMP_VEL;
+        if (this.touchingWall.left) {
+          this.vx = MAX_VEL_X * 0.8;
+        } else if (this.touchingWall.right) {
+          this.vx = -MAX_VEL_X * 0.8;
         }
       }
 

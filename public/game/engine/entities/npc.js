@@ -75,7 +75,8 @@ export class NPC {
       const newArrow = this.updateBehavior(dt, world, player, arrows || [], inAir);
       
       // Apply physics (gravity + collision) - this moves the entity
-      this.physics.updateEntity(this, dt);
+      // NPCs don't jump from player input, so pass false
+      this.physics.updateEntity(this, dt, false);
       
       return newArrow;
     } catch (error) {

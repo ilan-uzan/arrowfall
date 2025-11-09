@@ -12,7 +12,7 @@ export class PhysicsSystem {
     this.debugLogInterval = 0.1; // 10 Hz
   }
 
-  updateEntity(entity, dt = STEP) {
+  updateEntity(entity, dt = STEP, jumpPressed = false) {
     if (!entity || !this.world) return;
 
     // CRITICAL: Use fixed STEP everywhere, never variable dt for physics
@@ -39,6 +39,17 @@ export class PhysicsSystem {
       // STEP 1: Check ground state BEFORE movement (for gravity decision)
       // This uses the previous frame's position to determine if we should apply gravity
       entity.onGround = this.isOnGround(entity);
+      
+      // INSTANT JUMP CHECK - Execute immediately if button pressed and on ground
+      // This happens BEFORE gravity/movement so jump executes on the same frame
+      if (jumpPressed && (entity.onGround || entity.coyoteTime > 0) && entity.vy >= -50) {
+        entity.vy = JUMP_VEL;
+        entity.coyoteTime = 0;
+        entity.jumpBuffer = 0;
+        entity.jumpCooldown = 0;
+        entity.jumpLockTime = 0;
+        entity.justLanded = false;
+      }
       
       // Reset wall touching state (will be set by collision resolution)
       entity.touchingWall.left = false;
