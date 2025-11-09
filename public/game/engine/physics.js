@@ -63,12 +63,12 @@ export class PhysicsSystem {
       
       if (entity.onGround) {
         entity.groundStableTime += dt;
+        // Clear justLanded flag after jump lock time expires
+        if (entity.justLanded && entity.jumpLockTime <= 0) {
+          entity.justLanded = false;
+        }
       } else {
         entity.groundStableTime = 0;
-        entity.justLanded = false;
-      }
-      
-      if (entity.justLanded && entity.groundStableTime > 0.1) {
         entity.justLanded = false;
       }
 
@@ -305,20 +305,20 @@ export class PhysicsSystem {
           // Landing event - only trigger if we weren't on ground before
           if (!wasOnGroundBefore && !entity.justLanded) {
             entity.jumpBuffer = 0;
-            entity.jumpLockTime = 0.05;
+            entity.jumpLockTime = 0.02; // Reduced to 20ms for more responsive jumping
             entity.justLanded = true;
-            entity.groundStableTime = 0;
+            entity.groundStableTime = STEP; // Start with 1 frame already counted
             entity.jumpCooldown = entity.jumpCooldown || 0;
             
             const bottomY = entity.y + height;
             const bottomTile = Math.floor(bottomY / this.world.tileSize);
             const atBottomWall = bottomTile >= (this.world.height - 1);
             if (atBottomWall) {
-              entity.jumpCooldown = 0.1; // Reduced from 0.15 for more responsive jumping
-              entity.jumpLockTime = 0.05; // Reduced from 0.1 for more responsive jumping
+              entity.jumpCooldown = 0.05; // Reduced to 50ms
+              entity.jumpLockTime = 0.02; // Same as normal landing
               entity.onBottomWall = true;
             } else {
-              entity.jumpCooldown = 0.1;
+              entity.jumpCooldown = 0.05; // Reduced to 50ms
               entity.onBottomWall = false;
             }
           }
@@ -496,15 +496,18 @@ export class PhysicsSystem {
     }
     
     // Jump conditions
-    const groundStable = entity.onGround && entity.groundStableTime >= 0.01;
-    const canJumpFromGround = (groundStable && entity.jumpLockTime <= 0) || entity.coyoteTime > 0;
+    // Allow jumping if:
+    // 1. On ground and stable (been on ground for at least 1 frame) AND lock time expired AND not just landed OR coyote time active
+    // 2. OR touching a wall (wall-jump)
+    const groundStable = entity.onGround && entity.groundStableTime >= STEP; // At least 1 frame on ground
+    const canJumpFromGround = (groundStable && entity.jumpLockTime <= 0 && !entity.justLanded) || entity.coyoteTime > 0;
+    const canWallJump = entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right) && !entity.onGround;
     
     const canJump = entity.jumpBuffer > 0 &&
                     entity.jumpCooldown <= 0 &&
                     entity.jumpLockTime <= 0 &&
                     entity.vy >= -100 &&
-                    (canJumpFromGround || 
-                     (entity.touchingWall && (entity.touchingWall.left || entity.touchingWall.right)));
+                    (canJumpFromGround || canWallJump);
     
     if (canJump) {
       // Execute jump
