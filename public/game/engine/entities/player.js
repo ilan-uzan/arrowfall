@@ -75,16 +75,30 @@ export class Player {
       
       // Apply physics (gravity + collision) - pass jumpHeld for instant jump execution
       // Jump check happens INSIDE updateEntity right after ground state check
-      this.physics.updateEntity(this, dt, actions.jumpHeld || false);
+      const jumpHeld = actions.jumpHeld || false;
+      this.physics.updateEntity(this, dt, jumpHeld);
       
-      // Wall-jump check (after physics update)
-      if (actions.jumpHeld && !this.onGround && this.touchingWall && 
-          (this.touchingWall.left || this.touchingWall.right) && this.vy >= -50) {
+      // Wall-jump check (after physics update) - fallback if jump didn't execute in physics
+      if (jumpHeld && !this.onGround && this.touchingWall && 
+          (this.touchingWall.left || this.touchingWall.right) && this.vy >= -100) {
         this.vy = JUMP_VEL;
         if (this.touchingWall.left) {
           this.vx = MAX_VEL_X * 0.8;
         } else if (this.touchingWall.right) {
           this.vx = -MAX_VEL_X * 0.8;
+        }
+      }
+      
+      // Fallback jump check - if jumpHeld and on ground but didn't jump, force jump
+      if (jumpHeld && this.onGround && this.vy >= -100) {
+        // Double-check - if we're on ground and button is held, jump
+        if (this.vy >= -100) {
+          this.vy = JUMP_VEL;
+          this.coyoteTime = 0;
+          this.jumpBuffer = 0;
+          this.jumpCooldown = 0;
+          this.jumpLockTime = 0;
+          this.justLanded = false;
         }
       }
 

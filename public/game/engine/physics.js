@@ -42,13 +42,17 @@ export class PhysicsSystem {
       
       // INSTANT JUMP CHECK - Execute immediately if button pressed and on ground
       // This happens BEFORE gravity/movement so jump executes on the same frame
-      if (jumpPressed && (entity.onGround || entity.coyoteTime > 0) && entity.vy >= -50) {
-        entity.vy = JUMP_VEL;
-        entity.coyoteTime = 0;
-        entity.jumpBuffer = 0;
-        entity.jumpCooldown = 0;
-        entity.jumpLockTime = 0;
-        entity.justLanded = false;
+      // Simplified: if button pressed and (on ground OR coyote time) and not already jumping fast
+      if (jumpPressed) {
+        const canJump = (entity.onGround || (entity.coyoteTime && entity.coyoteTime > 0)) && entity.vy >= -100;
+        if (canJump) {
+          entity.vy = JUMP_VEL;
+          entity.coyoteTime = 0;
+          entity.jumpBuffer = 0;
+          entity.jumpCooldown = 0;
+          entity.jumpLockTime = 0;
+          entity.justLanded = false;
+        }
       }
       
       // Reset wall touching state (will be set by collision resolution)
