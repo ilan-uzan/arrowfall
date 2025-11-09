@@ -138,11 +138,8 @@ export class PhysicsSystem {
       
       if (atBottomWall) {
         entity.onBottomWall = true;
-        // Only zero upward velocity if we're actually on the bottom wall and grounded
-        // Don't prevent jumping - collision resolution handles that
-        if (entity.vy < 0 && entity.onGround) {
-          entity.vy = 0;
-        }
+        // Set onGround but don't zero upward velocity - allow jumps
+        // Collision resolution already prevents bouncing
         entity.onGround = true;
       } else {
         entity.onBottomWall = false;
