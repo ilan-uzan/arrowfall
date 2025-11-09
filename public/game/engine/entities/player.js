@@ -73,9 +73,20 @@ export class Player {
       // Wall slide
       this.physics.applyWallSlide(this, actions.left || false, actions.right || false);
       
-      // Apply physics (gravity + collision) - pass jumpHeld for instant jump execution
-      // Jump check happens INSIDE updateEntity right after ground state check
+      // Check jump BEFORE physics update - execute immediately if on ground
       const jumpHeld = actions.jumpHeld || false;
+      if (jumpHeld && this.onGround && this.vy >= -100) {
+        // Execute jump immediately before physics update
+        this.vy = JUMP_VEL;
+        this.coyoteTime = 0;
+        this.jumpBuffer = 0;
+        this.jumpCooldown = 0;
+        this.jumpLockTime = 0;
+        this.justLanded = false;
+      }
+      
+      // Apply physics (gravity + collision) - pass jumpHeld for instant jump execution
+      // Jump check also happens INSIDE updateEntity right after ground state check
       this.physics.updateEntity(this, dt, jumpHeld);
       
       // Wall-jump check (after physics update) - fallback if jump didn't execute in physics
