@@ -90,16 +90,14 @@ export class Player {
       }
       
       // Fallback jump check - if jumpHeld and on ground but didn't jump, force jump
+      // This ensures jumping works even if the physics check didn't execute
       if (jumpHeld && this.onGround && this.vy >= -100) {
-        // Double-check - if we're on ground and button is held, jump
-        if (this.vy >= -100) {
-          this.vy = JUMP_VEL;
-          this.coyoteTime = 0;
-          this.jumpBuffer = 0;
-          this.jumpCooldown = 0;
-          this.jumpLockTime = 0;
-          this.justLanded = false;
-        }
+        this.vy = JUMP_VEL;
+        this.coyoteTime = 0;
+        this.jumpBuffer = 0;
+        this.jumpCooldown = 0;
+        this.jumpLockTime = 0;
+        this.justLanded = false;
       }
 
       // Shooting
