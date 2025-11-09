@@ -1,5 +1,5 @@
 // Game Loop - Fixed Timestep + Interpolated Render
-import { FIXED_DT, VIEW } from './constants.js';
+import { STEP, VIEW } from './constants.js';
 
 export class GameLoop {
   constructor(updateFn, renderFn) {
@@ -9,6 +9,7 @@ export class GameLoop {
     this.lastTime = performance.now();
     this.accumulator = 0;
     this.frameId = null;
+    this.maxSubsteps = 5; // Cap max substeps to avoid spiral of death
   }
 
   start() {
@@ -39,14 +40,16 @@ export class GameLoop {
     
     this.accumulator += frameTime;
     
-    // Fixed timestep updates
-    while (this.accumulator >= FIXED_DT) {
-      this.updateFn(FIXED_DT);
-      this.accumulator -= FIXED_DT;
+    // Fixed timestep updates - cap max substeps
+    let substeps = 0;
+    while (this.accumulator >= STEP && substeps < this.maxSubsteps) {
+      this.updateFn(STEP);
+      this.accumulator -= STEP;
+      substeps++;
     }
     
     // Interpolated render
-    const alpha = this.accumulator / FIXED_DT;
+    const alpha = this.accumulator / STEP;
     this.renderFn(alpha);
     
     this.frameId = requestAnimationFrame(() => this.tick());

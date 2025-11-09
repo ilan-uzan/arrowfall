@@ -20,6 +20,8 @@ export const VIEW = { w: 320, h: 180 };   // Logical resolution
 export const CSS_SCALE = 3;                // Display scale
 
 // Physics Constants
+export const TILE_SIZE = 16;                // Base tile size (same as TILE)
+export const STEP = 1 / 120;               // Fixed timestep (120 FPS) - use this everywhere physics runs
 export const GRAVITY = 1300;               // px/s^2
 export const MOVE_ACC = 2500;              // px/s^2
 export const MAX_VEL_X = 180;              // px/s
@@ -27,6 +29,12 @@ export const JUMP_VEL = -380;              // px/s
 export const WALL_SLIDE_MAX = 60;          // px/s
 export const COYOTE_MS = 80;
 export const JUMP_BUFFER_MS = 100;
+
+// Anti-bounce constants
+export const GROUND_FRICTION = 0.15;       // Ground friction per step (tuned for 120Hz)
+export const AIR_DRAG = 0.01;              // Air drag per step
+export const PENETRATION_SLOP = 0.08;     // Minimum overlap to resolve (in pixels)
+export const SLEEP_EPS = 0.02;             // Minimum velocity to zero out jitter (px/step)
 
 // Arrow Constants
 export const ARROW_SPEED = 380;            // px/s
@@ -38,7 +46,10 @@ export const DEADZONE = 0.15; // Standard deadzone for smooth control
 
 // Game Rules
 export const WINS_TO_VICTORY = 3;          // best-of-5 (first to 3)
-export const FIXED_DT = 1 / 120;           // Fixed timestep (120 FPS for smooth physics)
+export const FIXED_DT = STEP;              // Alias for STEP (backward compatibility)
+
+// Debug flag for physics instrumentation
+export const DEBUG_PHYSICS = false;        // Set to true to enable physics debug overlays
 
 // Player Colors
 export const PLAYER_COLORS = [

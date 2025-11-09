@@ -1,19 +1,22 @@
-// Physics System - Simple Platformer Physics
-import { GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, FIXED_DT } from './constants.js';
+// Physics System - Zero-Bounce One-Axis Resolution
+import { 
+  GRAVITY, MOVE_ACC, MAX_VEL_X, JUMP_VEL, WALL_SLIDE_MAX, COYOTE_MS, JUMP_BUFFER_MS, 
+  STEP, GROUND_FRICTION, AIR_DRAG, PENETRATION_SLOP, SLEEP_EPS, DEBUG_PHYSICS 
+} from './constants.js';
 import { wrapPosition } from './wrap.js';
 
 export class PhysicsSystem {
   constructor(world) {
     this.world = world;
+    this.debugLogThrottle = 0;
+    this.debugLogInterval = 0.1; // 10 Hz
   }
 
-  updateEntity(entity, dt = FIXED_DT) {
+  updateEntity(entity, dt = STEP) {
     if (!entity || !this.world) return;
 
-    // Validate dt
-    if (!dt || dt <= 0 || dt > 0.1) {
-      dt = FIXED_DT;
-    }
+    // CRITICAL: Use fixed STEP everywhere, never variable dt for physics
+    dt = STEP;
 
     try {
       // Initialize properties
@@ -30,24 +33,34 @@ export class PhysicsSystem {
       if (entity.groundStableTime === undefined) entity.groundStableTime = 0;
       if (entity.justLanded === undefined) entity.justLanded = false;
 
-      // Store old ground state
+      // Store old ground state BEFORE resetting
       const wasOnGround = entity.onGround;
       
-      const clampedDt = Math.max(0, Math.min(dt, 0.1));
+      // GOLDEN RULE: Reset isGrounded at start of each step
+      // It will be set only from Y-axis downward resolves
+      entity.onGround = false;
+      entity.touchingWall.left = false;
+      entity.touchingWall.right = false;
       
-      // STEP 1: Check ground state ONCE at the start
-      entity.onGround = this.isOnGround(entity);
-      
-      // STEP 2: Update coyote time and ground stability
+      // Debug logging (throttled to 10 Hz)
+      if (DEBUG_PHYSICS) {
+        this.debugLogThrottle += dt;
+        if (this.debugLogThrottle >= this.debugLogInterval) {
+          console.log(`[Physics] Entity ${entity.id || '?'}: pos=(${entity.x.toFixed(2)}, ${entity.y.toFixed(2)}), vel=(${entity.vx.toFixed(2)}, ${entity.vy.toFixed(2)}), onGround=${entity.onGround}`);
+          this.debugLogThrottle = 0;
+        }
+      }
+
+      // STEP 1: Update coyote time and ground stability
       if (wasOnGround && !entity.onGround) {
         entity.coyoteTime = COYOTE_MS / 1000;
       }
       if (entity.coyoteTime > 0) {
-        entity.coyoteTime -= clampedDt;
+        entity.coyoteTime -= dt;
       }
       
       if (entity.onGround) {
-        entity.groundStableTime += clampedDt;
+        entity.groundStableTime += dt;
       } else {
         entity.groundStableTime = 0;
         entity.justLanded = false;
@@ -57,137 +70,53 @@ export class PhysicsSystem {
         entity.justLanded = false;
       }
 
-      // STEP 3: Apply gravity ONLY if not on ground
+      // STEP 2: Apply gravity ONLY if not on ground
       if (!entity.onGround) {
-        entity.vy += GRAVITY * clampedDt;
+        entity.vy += GRAVITY * dt;
         const maxFallSpeed = 640;
         if (entity.vy > maxFallSpeed) {
           entity.vy = maxFallSpeed;
         }
       }
 
-      // STEP 4: Move horizontally
-      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
-      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-      
-      // If touching wall, zero horizontal velocity
-      if (entity.touchingWall.left || entity.touchingWall.right) {
-        entity.vx = 0;
-      }
-      
-      // Move horizontally if not touching walls
-      if (!entity.touchingWall.left && !entity.touchingWall.right && entity.vx !== 0) {
-        const moveX = entity.vx * clampedDt;
-        const newX = entity.x + moveX;
-        
-        // Check horizontal collision
-        if (this.hasCollision(newX, entity.y, entity.width || 12, entity.height || 14)) {
-          // Hit wall - snap to wall
-          if (moveX > 0) {
-            const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
-            entity.x = rightTile * this.world.tileSize - (entity.width || 12);
-            entity.touchingWall.right = true;
-          } else {
-            const leftTile = Math.floor(entity.x / this.world.tileSize);
-            entity.x = (leftTile + 1) * this.world.tileSize;
-            entity.touchingWall.left = true;
-          }
-          entity.vx = 0;
-        } else {
-          entity.x = newX;
-        }
-      }
+      // STEP 3: Integrate velocity (move entity)
+      const oldX = entity.x;
+      const oldY = entity.y;
+      entity.x += entity.vx * dt;
+      entity.y += entity.vy * dt;
 
-      // STEP 5: Move vertically
-      if (entity.vy !== 0) {
-        const moveY = entity.vy * clampedDt;
-        const newY = entity.y + moveY;
-        
-        // Check vertical collision
-        if (this.hasCollision(entity.x, newY, entity.width || 12, entity.height || 14)) {
-          if (moveY > 0) {
-            // Moving down - hit ground
-            const groundTile = Math.floor((entity.y + (entity.height || 14)) / this.world.tileSize);
-            entity.y = groundTile * this.world.tileSize - (entity.height || 14);
-            entity.vy = 0;
-            entity.onGround = true;
-            
-            // Landing event
-            if (!wasOnGround && !entity.justLanded) {
-              entity.jumpBuffer = 0;
-              entity.jumpLockTime = 0.05;
-              entity.justLanded = true;
-              entity.groundStableTime = 0;
-              entity.jumpCooldown = entity.jumpCooldown || 0;
-              
-              const bottomY = entity.y + (entity.height || 14);
-              const bottomTile = Math.floor(bottomY / this.world.tileSize);
-              const atBottomWall = bottomTile >= (this.world.height - 1);
-              if (atBottomWall) {
-                entity.jumpCooldown = 0.15;
-                entity.jumpLockTime = 0.1;
-                entity.onBottomWall = true;
-              } else {
-                entity.jumpCooldown = 0.1;
-                entity.onBottomWall = false;
-              }
-            }
-          } else {
-            // Moving up - hit ceiling
-            const topTile = Math.floor(entity.y / this.world.tileSize);
-            entity.y = (topTile + 1) * this.world.tileSize;
-            entity.vy = 0;
-          }
-        } else {
-          entity.y = newY;
-        }
-      }
+      // STEP 4: Apply wrapping AFTER integration but BEFORE collision resolution
+      const wrapped = wrapPosition(entity.x, entity.y);
+      entity.x = wrapped.x;
+      entity.y = wrapped.y;
 
-      // STEP 6: Final ground state check and position snap
-      entity.onGround = this.isOnGround(entity);
+      // STEP 5: Resolve collisions - ONE AXIS AT A TIME
+      // Order: X-axis first, then Y-axis (consistent order prevents jitter)
       
-      // If on ground, snap position and zero downward velocity
+      // Resolve X-axis collisions
+      this.resolveAxisCollision(entity, 'x');
+      
+      // Resolve Y-axis collisions
+      this.resolveAxisCollision(entity, 'y');
+
+      // STEP 6: Apply friction AFTER collision resolution
       if (entity.onGround) {
-        // Snap position to ground
-        const bottomY = entity.y + (entity.height || 14);
-        const tileBelow = Math.floor(bottomY / this.world.tileSize);
-        const leftTile = Math.floor(entity.x / this.world.tileSize);
-        const rightTile = Math.floor((entity.x + (entity.width || 12) - 0.1) / this.world.tileSize);
-        
-        for (let tx = leftTile; tx <= rightTile; tx++) {
-          if (this.world.isSolid(tx, tileBelow)) {
-            const groundY = tileBelow * this.world.tileSize;
-            const distance = bottomY - groundY;
-            if (distance > 0 && distance <= 4) {
-              entity.y = groundY - (entity.height || 14);
-              // Only zero downward velocity, allow upward (jumps)
-              if (entity.vy > 0) {
-                entity.vy = 0;
-              }
-              break;
-            }
-          }
+        // Ground friction - only apply when grounded
+        entity.vx *= (1 - GROUND_FRICTION);
+        if (Math.abs(entity.vx) < SLEEP_EPS) {
+          entity.vx = 0;
         }
+      } else {
+        // Air drag - small drag when airborne
+        entity.vx *= (1 - AIR_DRAG);
       }
       
-      // Final wall check
-      entity.touchingWall.left = this.isTouchingWall(entity, 'left');
-      entity.touchingWall.right = this.isTouchingWall(entity, 'right');
-      if (entity.touchingWall.left || entity.touchingWall.right) {
-        entity.vx = 0;
-        
-        // Snap position to wall
-        const leftTile = Math.floor(entity.x / this.world.tileSize);
-        const rightTile = Math.floor((entity.x + (entity.width || 12)) / this.world.tileSize);
-        
-        if (entity.touchingWall.left) {
-          entity.x = (leftTile + 1) * this.world.tileSize;
-        }
-        if (entity.touchingWall.right) {
-          entity.x = rightTile * this.world.tileSize - (entity.width || 12);
-        }
+      // Zero out tiny vertical jitter
+      if (Math.abs(entity.vy) < SLEEP_EPS) {
+        entity.vy = 0;
       }
-      
+
+      // STEP 7: Final state checks
       // Bottom wall check
       const bottomY = entity.y + (entity.height || 14);
       const bottomTile = Math.floor(bottomY / this.world.tileSize);
@@ -203,16 +132,186 @@ export class PhysicsSystem {
         entity.onBottomWall = false;
       }
 
-      // Apply wrapping
-      const wrapped = wrapPosition(entity.x, entity.y);
-      entity.x = wrapped.x;
-      entity.y = wrapped.y;
+      // Debug: log collision info
+      if (DEBUG_PHYSICS && (oldX !== entity.x || oldY !== entity.y)) {
+        console.log(`[Physics] Collision resolved: moved from (${oldX.toFixed(2)}, ${oldY.toFixed(2)}) to (${entity.x.toFixed(2)}, ${entity.y.toFixed(2)})`);
+      }
     } catch (error) {
       console.error('Error in physics updateEntity:', error);
     }
   }
 
-  // Simple collision check
+  /**
+   * Resolve collision along a single axis with zero-bounce
+   * @param {Object} entity - Entity to resolve
+   * @param {string} axis - 'x' or 'y'
+   */
+  resolveAxisCollision(entity, axis) {
+    if (!entity || !axis) return;
+    
+    const width = entity.width || 12;
+    const height = entity.height || 14;
+    const x = entity.x;
+    const y = entity.y;
+    
+    // Get tile bounds
+    const leftTile = Math.floor(x / this.world.tileSize);
+    const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
+    const topTile = Math.floor(y / this.world.tileSize);
+    const bottomTile = Math.floor((y + height - 0.1) / this.world.tileSize);
+
+    if (axis === 'x') {
+      // Resolve X-axis collisions
+      let minOverlap = 0;
+      let resolveLeft = false;
+      let resolveRight = false;
+      
+      // Check left wall - entity overlaps if x < wallRight
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        if (this.world.isSolid(leftTile, ty)) {
+          const wallRight = (leftTile + 1) * this.world.tileSize;
+          // Entity is overlapping if its left edge is to the left of the wall's right edge
+          if (x < wallRight) {
+            const overlap = wallRight - x;
+            if (overlap > minOverlap) {
+              minOverlap = overlap;
+              resolveLeft = true;
+              resolveRight = false;
+            }
+          }
+        }
+      }
+      
+      // Check right wall - entity overlaps if (x + width) > wallLeft
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        if (this.world.isSolid(rightTile, ty)) {
+          const wallLeft = rightTile * this.world.tileSize;
+          // Entity is overlapping if its right edge is to the right of the wall's left edge
+          if ((x + width) > wallLeft) {
+            const overlap = (x + width) - wallLeft;
+            if (overlap > minOverlap) {
+              minOverlap = overlap;
+              resolveLeft = false;
+              resolveRight = true;
+            }
+          }
+        }
+      }
+      
+      // Resolve X collision if overlap exceeds slop
+      if (minOverlap > PENETRATION_SLOP) {
+        if (resolveLeft) {
+          // Push out to the right
+          entity.x += minOverlap;
+          entity.touchingWall.left = true;
+          // Zero inbound velocity (moving left)
+          if (entity.vx < 0) {
+            entity.vx = 0;
+          }
+        } else if (resolveRight) {
+          // Push out to the left
+          entity.x -= minOverlap;
+          entity.touchingWall.right = true;
+          // Zero inbound velocity (moving right)
+          if (entity.vx > 0) {
+            entity.vx = 0;
+          }
+        }
+        
+        // Zero tiny velocities
+        if (Math.abs(entity.vx) < SLEEP_EPS) {
+          entity.vx = 0;
+        }
+      }
+    } else if (axis === 'y') {
+      // Resolve Y-axis collisions
+      let minOverlap = 0;
+      let resolveTop = false;
+      let resolveBottom = false;
+      
+      // Check ceiling - entity overlaps if y < ceilingBottom
+      for (let tx = leftTile; tx <= rightTile; tx++) {
+        if (this.world.isSolid(tx, topTile)) {
+          const ceilingBottom = (topTile + 1) * this.world.tileSize;
+          // Entity is overlapping if its top edge is above the ceiling's bottom edge
+          if (y < ceilingBottom) {
+            const overlap = ceilingBottom - y;
+            if (overlap > minOverlap) {
+              minOverlap = overlap;
+              resolveTop = true;
+              resolveBottom = false;
+            }
+          }
+        }
+      }
+      
+      // Check floor - entity overlaps if (y + height) > floorTop
+      for (let tx = leftTile; tx <= rightTile; tx++) {
+        if (this.world.isSolid(tx, bottomTile)) {
+          const floorTop = bottomTile * this.world.tileSize;
+          // Entity is overlapping if its bottom edge is below the floor's top edge
+          if ((y + height) > floorTop) {
+            const overlap = (y + height) - floorTop;
+            if (overlap > minOverlap) {
+              minOverlap = overlap;
+              resolveTop = false;
+              resolveBottom = true;
+            }
+          }
+        }
+      }
+      
+      // Resolve Y collision if overlap exceeds slop
+      if (minOverlap > PENETRATION_SLOP) {
+        if (resolveTop) {
+          // Push down (hit ceiling)
+          entity.y += minOverlap;
+          // Zero inbound velocity (moving up)
+          if (entity.vy < 0) {
+            entity.vy = 0;
+          }
+        } else if (resolveBottom) {
+          // Push up (landed on floor)
+          entity.y -= minOverlap;
+          // Zero inbound velocity (moving down)
+          if (entity.vy > 0) {
+            entity.vy = 0;
+          }
+          // GOLDEN RULE: Set isGrounded ONLY from Y-axis downward resolves
+          const wasOnGroundBefore = entity.onGround;
+          entity.onGround = true;
+          
+          // Landing event - only trigger if we weren't on ground before
+          if (!wasOnGroundBefore && !entity.justLanded) {
+            entity.jumpBuffer = 0;
+            entity.jumpLockTime = 0.05;
+            entity.justLanded = true;
+            entity.groundStableTime = 0;
+            entity.jumpCooldown = entity.jumpCooldown || 0;
+            
+            const bottomY = entity.y + height;
+            const bottomTile = Math.floor(bottomY / this.world.tileSize);
+            const atBottomWall = bottomTile >= (this.world.height - 1);
+            if (atBottomWall) {
+              entity.jumpCooldown = 0.15;
+              entity.jumpLockTime = 0.1;
+              entity.onBottomWall = true;
+            } else {
+              entity.jumpCooldown = 0.1;
+              entity.onBottomWall = false;
+            }
+          }
+        }
+        
+        // Zero tiny velocities
+        if (Math.abs(entity.vy) < SLEEP_EPS) {
+          entity.vy = 0;
+        }
+      }
+    }
+  }
+
+  // Simple collision check (for movement prediction)
   hasCollision(x, y, width, height) {
     const leftTile = Math.floor(x / this.world.tileSize);
     const rightTile = Math.floor((x + width - 0.1) / this.world.tileSize);
@@ -229,7 +328,7 @@ export class PhysicsSystem {
     return false;
   }
 
-  // Check if entity is on ground
+  // Check if entity is on ground (for initial state check)
   isOnGround(entity) {
     if (!entity) return false;
     
@@ -286,10 +385,11 @@ export class PhysicsSystem {
     return false;
   }
 
-  applyHorizontalMovement(entity, targetVx, dt = FIXED_DT, inAir = false) {
+  applyHorizontalMovement(entity, targetVx, dt = STEP, inAir = false) {
     if (!entity || entity.vx === undefined) return;
     
-    dt = Math.max(0, Math.min(dt, 0.1));
+    // CRITICAL: Use fixed STEP
+    dt = STEP;
     
     // Check wall touching state BEFORE setting velocity
     const touchingLeft = this.isTouchingWall(entity, 'left');
@@ -358,10 +458,10 @@ export class PhysicsSystem {
     
     // Update timers
     if (entity.jumpLockTime > 0) {
-      entity.jumpLockTime -= FIXED_DT;
+      entity.jumpLockTime -= STEP;
     }
     if (entity.jumpCooldown > 0) {
-      entity.jumpCooldown -= FIXED_DT;
+      entity.jumpCooldown -= STEP;
     }
     
     // Check bottom wall
@@ -384,7 +484,7 @@ export class PhysicsSystem {
     
     // Decrement jump buffer
     if (entity.jumpBuffer > 0) {
-      entity.jumpBuffer -= FIXED_DT;
+      entity.jumpBuffer -= STEP;
     }
     
     // Jump conditions
